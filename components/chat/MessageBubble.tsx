@@ -274,7 +274,7 @@ export function MessageBubble({
                   <Pin className="h-3.5 w-3.5" />
                 </button>
               )}
-              {isAdmin && onDelete && message.type !== 'system' && (
+              {isAdmin && onDelete && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
