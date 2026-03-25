@@ -7,6 +7,7 @@ import type { Message, Member } from '@/lib/types'
 interface UseRealtimeChatProps {
   onNewMessage: (message: Message) => void
   onMessageUpdate: (messageId: string, updates: Partial<Message>) => void
+  onMessageDelete: (messageId: string) => void
   onNewMember: (member: Member) => void
   onReactionChange: (messageId: string) => void
   onCelebration: () => void
@@ -16,6 +17,7 @@ interface UseRealtimeChatProps {
 export function useRealtimeChat({
   onNewMessage,
   onMessageUpdate,
+  onMessageDelete,
   onNewMember,
   onReactionChange,
   onCelebration,
@@ -79,6 +81,16 @@ export function useRealtimeChat({
       )
       .on(
         'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'messages' },
+        (payload) => {
+          const deleted = payload.old as { id?: string }
+          if (deleted?.id) {
+            onMessageDelete(deleted.id)
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'reactions' },
         (payload) => {
           const messageId = (payload.new as { message_id?: string })?.message_id ||
@@ -116,7 +128,7 @@ export function useRealtimeChat({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [currentMemberId, onNewMessage, onNewMember, onReactionChange, onCelebration])
+  }, [currentMemberId, onNewMessage, onMessageUpdate, onMessageDelete, onNewMember, onReactionChange, onCelebration])
 
   return { sendCelebration, onlineCount }
 }

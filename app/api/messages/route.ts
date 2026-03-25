@@ -185,3 +185,70 @@ export async function POST(request: Request) {
     )
   }
 }
+
+const deleteSchema = z.object({
+  messageId: z.string().uuid(),
+})
+
+export async function DELETE(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!session.isAdmin) {
+    return NextResponse.json(
+      { error: 'Only parents can delete messages' },
+      { status: 403 }
+    )
+  }
+
+  try {
+    const body = await request.json()
+    const parsed = deleteSchema.safeParse(body)
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
+    }
+
+    const supabase = createAdminClient()
+
+    const { data: message } = await supabase
+      .from('messages')
+      .select('id, media(url)')
+      .eq('id', parsed.data.messageId)
+      .single()
+
+    if (!message) {
+      return NextResponse.json({ error: 'Message not found' }, { status: 404 })
+    }
+
+    const mediaUrls = (message.media as { url: string }[] | null) || []
+    if (mediaUrls.length > 0) {
+      const storagePaths = mediaUrls
+        .map((m) => {
+          const match = m.url.match(/\/storage\/v1\/object\/public\/media\/(.+)$/)
+          return match?.[1]
+        })
+        .filter(Boolean) as string[]
+
+      if (storagePaths.length > 0) {
+        await supabase.storage.from('media').remove(storagePaths)
+      }
+    }
+
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .eq('id', parsed.data.messageId)
+
+    if (error) {
+      console.error('Failed to delete message:', error)
+      return NextResponse.json({ error: 'Failed to delete message' }, { status: 500 })
+    }
+
+    return NextResponse.json({ deleted: true })
+  } catch {
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
+  }
+}

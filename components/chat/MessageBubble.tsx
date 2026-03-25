@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import type { Message, Member } from '@/lib/types'
 import { ReactionBar } from './ReactionBar'
 import { ReactionPicker } from './ReactionPicker'
-import { Reply, SmilePlus, Pin } from 'lucide-react'
+import { Reply, SmilePlus, Pin, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
 interface MessageBubbleProps {
@@ -19,6 +19,7 @@ interface MessageBubbleProps {
   onReaction: (messageId: string, emoji: string) => void
   onMediaClick: (url: string, type: 'image' | 'video' | 'audio') => void
   onPin?: (messageId: string) => void
+  onDelete?: (messageId: string) => void
   isGrouped: boolean
   isPinned?: boolean
 }
@@ -31,6 +32,7 @@ export function MessageBubble({
   onReaction,
   onMediaClick,
   onPin,
+  onDelete,
   isGrouped,
   isPinned,
 }: MessageBubbleProps) {
@@ -270,6 +272,20 @@ export function MessageBubble({
                   aria-label={isPinned ? 'Unpin' : 'Pin'}
                 >
                   <Pin className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {isAdmin && onDelete && message.type !== 'system' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (confirm('Delete this message?')) {
+                      onDelete(message.id)
+                    }
+                  }}
+                  className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-500"
+                  aria-label="Delete message"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               )}
             </motion.div>

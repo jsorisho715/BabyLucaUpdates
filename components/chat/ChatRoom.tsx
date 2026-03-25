@@ -66,9 +66,14 @@ export function ChatRoom({ session }: ChatRoomProps) {
     )
   }, [setMessages])
 
+  const handleMessageDelete = useCallback((messageId: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== messageId))
+  }, [setMessages])
+
   const { sendCelebration, onlineCount } = useRealtimeChat({
     onNewMessage: handleNewMessage,
     onMessageUpdate: handleMessageUpdate,
+    onMessageDelete: handleMessageDelete,
     onNewMember: (member) => {
       setMembers((prev) => {
         if (prev.some((m) => m.id === member.id)) return prev
@@ -173,6 +178,27 @@ export function ChatRoom({ session }: ChatRoomProps) {
       toast.success(data.pinned ? 'Message pinned' : 'Message unpinned')
     } catch {
       toast.error('Failed to pin')
+    }
+  }
+
+  const handleDelete = async (messageId: string) => {
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        toast.error(err.error || 'Failed to delete')
+        return
+      }
+
+      setMessages((prev) => prev.filter((m) => m.id !== messageId))
+      toast.success('Message deleted')
+    } catch {
+      toast.error('Failed to delete')
     }
   }
 
@@ -289,6 +315,7 @@ export function ChatRoom({ session }: ChatRoomProps) {
               onReaction={handleReaction}
               onMediaClick={(url, type) => { if (type !== 'audio') setMediaViewer({ url, type }) }}
               onPin={session.isAdmin ? handlePin : undefined}
+              onDelete={session.isAdmin ? handleDelete : undefined}
               isGrouped={isGrouped(index)}
               isPinned={message.is_pinned}
             />
