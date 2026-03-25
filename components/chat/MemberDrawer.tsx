@@ -45,7 +45,7 @@ export function MemberDrawer({ members, onlineCount }: MemberDrawerProps) {
                   className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-white"
                   style={{ backgroundColor: member.avatar_color }}
                 >
-                  {member.first_name[0]}{member.last_name[0]}
+                  {member.first_name?.[0] ?? ''}{member.last_name?.[0] ?? ''}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">

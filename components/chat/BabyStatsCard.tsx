@@ -1,20 +1,26 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { format } from 'date-fns'
+import { motion } from 'framer-motion'
+import { format, isValid } from 'date-fns'
 import { toast } from 'sonner'
 import type { BabyStats } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
-import { Baby, Scale, Ruler, Clock, Edit2, X, Loader2 } from 'lucide-react'
+import { Baby, Scale, Ruler, Clock, Edit2, Loader2 } from 'lucide-react'
 
 interface BabyStatsCardProps {
   isAdmin: boolean
+}
+
+function safeFormatDate(dateStr: string | null | undefined, fmt: string): string | null {
+  if (!dateStr) return null
+  const d = new Date(dateStr)
+  return isValid(d) ? format(d, fmt) : null
 }
 
 export function BabyStatsCard({ isAdmin }: BabyStatsCardProps) {
@@ -24,7 +30,10 @@ export function BabyStatsCard({ isAdmin }: BabyStatsCardProps) {
 
   useEffect(() => {
     fetch('/api/baby-stats')
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error('Failed')
+        return r.json()
+      })
       .then((d) => setStats(d.stats))
       .catch(() => {})
       .finally(() => setIsLoading(false))
@@ -32,7 +41,9 @@ export function BabyStatsCard({ isAdmin }: BabyStatsCardProps) {
 
   if (isLoading) return null
 
-  const hasData = stats?.birth_date || stats?.weight_lbs
+  const hasWeight = stats?.weight_lbs != null || stats?.weight_oz != null
+  const hasLength = stats?.length_inches != null
+  const hasData = stats?.birth_date || hasWeight
 
   if (!hasData && !isAdmin) return null
 
@@ -60,6 +71,9 @@ export function BabyStatsCard({ isAdmin }: BabyStatsCardProps) {
     )
   }
 
+  const birthFormatted = safeFormatDate(stats?.birth_date, 'MMMM d, yyyy h:mm a')
+  const birthTime = safeFormatDate(stats?.birth_date, 'h:mm a')
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
@@ -76,10 +90,8 @@ export function BabyStatsCard({ isAdmin }: BabyStatsCardProps) {
               <h3 className="text-lg font-bold text-foreground">
                 {stats?.name || 'Luca'} is here! 🎉
               </h3>
-              {stats?.birth_date && (
-                <p className="text-sm text-muted-foreground">
-                  Born {format(new Date(stats.birth_date), 'MMMM d, yyyy h:mm a')}
-                </p>
+              {birthFormatted && (
+                <p className="text-sm text-muted-foreground">Born {birthFormatted}</p>
               )}
             </div>
           </div>
@@ -87,6 +99,7 @@ export function BabyStatsCard({ isAdmin }: BabyStatsCardProps) {
             <button
               onClick={() => setShowEdit(true)}
               className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-white/50"
+              aria-label="Edit baby stats"
             >
               <Edit2 className="h-3.5 w-3.5" />
             </button>
@@ -94,18 +107,18 @@ export function BabyStatsCard({ isAdmin }: BabyStatsCardProps) {
         </div>
 
         <div className="mt-3 grid grid-cols-3 gap-3">
-          {(stats?.weight_lbs !== null || stats?.weight_oz !== null) && (
+          {hasWeight && (
             <div className="flex items-center gap-2 rounded-xl bg-white/60 px-3 py-2">
               <Scale className="h-4 w-4 text-primary" />
               <div>
                 <p className="text-xs text-muted-foreground">Weight</p>
                 <p className="text-sm font-semibold">
-                  {stats?.weight_lbs || 0}lb {stats?.weight_oz || 0}oz
+                  {stats?.weight_lbs ?? 0}lb {stats?.weight_oz ?? 0}oz
                 </p>
               </div>
             </div>
           )}
-          {stats?.length_inches !== null && (
+          {hasLength && (
             <div className="flex items-center gap-2 rounded-xl bg-white/60 px-3 py-2">
               <Ruler className="h-4 w-4 text-primary" />
               <div>
@@ -114,14 +127,12 @@ export function BabyStatsCard({ isAdmin }: BabyStatsCardProps) {
               </div>
             </div>
           )}
-          {stats?.birth_date && (
+          {birthTime && (
             <div className="flex items-center gap-2 rounded-xl bg-white/60 px-3 py-2">
               <Clock className="h-4 w-4 text-primary" />
               <div>
                 <p className="text-xs text-muted-foreground">Time</p>
-                <p className="text-sm font-semibold">
-                  {format(new Date(stats.birth_date), 'h:mm a')}
-                </p>
+                <p className="text-sm font-semibold">{birthTime}</p>
               </div>
             </div>
           )}
@@ -150,15 +161,14 @@ function EditStatsDialog({
   stats: BabyStats | null
   onSave: (s: BabyStats) => void
 }) {
-  const [form, setForm] = useState({
-    name: stats?.name || 'Luca',
-    birth_date: stats?.birth_date ? stats.birth_date.slice(0, 16) : '',
-    weight_lbs: stats?.weight_lbs?.toString() || '',
-    weight_oz: stats?.weight_oz?.toString() || '',
-    length_inches: stats?.length_inches?.toString() || '',
-    notes: stats?.notes || '',
-  })
+  const [form, setForm] = useState(getFormDefaults(stats))
   const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setForm(getFormDefaults(stats))
+    }
+  }, [open, stats])
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -266,4 +276,15 @@ function EditStatsDialog({
       </DialogContent>
     </Dialog>
   )
+}
+
+function getFormDefaults(stats: BabyStats | null) {
+  return {
+    name: stats?.name || 'Luca',
+    birth_date: stats?.birth_date ? stats.birth_date.slice(0, 16) : '',
+    weight_lbs: stats?.weight_lbs?.toString() || '',
+    weight_oz: stats?.weight_oz?.toString() || '',
+    length_inches: stats?.length_inches?.toString() || '',
+    notes: stats?.notes || '',
+  }
 }

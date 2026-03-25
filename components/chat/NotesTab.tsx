@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, isValid } from 'date-fns'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 import type { Note, Member } from '@/lib/types'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
@@ -14,19 +15,24 @@ interface NotesTabProps {
   currentMemberId: string
 }
 
+function safeTimeAgo(dateStr: string): string {
+  const d = new Date(dateStr)
+  return isValid(d) ? formatDistanceToNow(d, { addSuffix: true }) : ''
+}
+
 export function NotesTab({ currentMemberId }: NotesTabProps) {
   const [notes, setNotes] = useState<Note[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [content, setContent] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const supabaseRef = useRef(createClient())
 
   const fetchNotes = useCallback(async () => {
     try {
       const res = await fetch('/api/notes')
-      if (res.ok) {
-        const data = await res.json()
-        setNotes(data.notes || [])
-      }
+      if (!res.ok) throw new Error('Failed')
+      const data = await res.json()
+      setNotes(data.notes || [])
     } catch {
       // silently fail
     } finally {
@@ -36,6 +42,21 @@ export function NotesTab({ currentMemberId }: NotesTabProps) {
 
   useEffect(() => {
     fetchNotes()
+
+    const channel = supabaseRef.current
+      .channel('notes-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notes' },
+        async () => {
+          await fetchNotes()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabaseRef.current.removeChannel(channel)
+    }
   }, [fetchNotes])
 
   const handleSend = async () => {
@@ -101,7 +122,7 @@ export function NotesTab({ currentMemberId }: NotesTabProps) {
         <div className="space-y-3">
           <AnimatePresence initial={false}>
             {notes.map((note, idx) => {
-              const member = note.member as Member
+              const member = note.member as Member | undefined
               const bgClass = pastelBgs[idx % pastelBgs.length]
               const isOwn = note.member_id === currentMemberId
 
@@ -110,7 +131,7 @@ export function NotesTab({ currentMemberId }: NotesTabProps) {
                   key={note.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
+                  transition={{ delay: Math.min(idx * 0.05, 0.5) }}
                   className={`rounded-2xl ${bgClass} p-4 shadow-sm`}
                 >
                   <div className="mb-2 flex items-center gap-2">
@@ -118,10 +139,10 @@ export function NotesTab({ currentMemberId }: NotesTabProps) {
                       className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold text-white"
                       style={{ backgroundColor: member?.avatar_color || '#4BA3E3' }}
                     >
-                      {member?.first_name[0]}{member?.last_name[0]}
+                      {member?.first_name?.[0] ?? '?'}{member?.last_name?.[0] ?? ''}
                     </div>
                     <span className="text-sm font-medium text-foreground">
-                      {member?.first_name} {member?.last_name}
+                      {member?.first_name ?? 'Unknown'} {member?.last_name ?? ''}
                     </span>
                     {member?.is_admin && (
                       <Badge variant="secondary" className="h-4 px-1 text-[9px]">
@@ -136,7 +157,7 @@ export function NotesTab({ currentMemberId }: NotesTabProps) {
                     {note.content}
                   </p>
                   <p className="mt-2 text-[11px] text-muted-foreground">
-                    {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
+                    {safeTimeAgo(note.created_at)}
                   </p>
                 </motion.div>
               )
@@ -160,6 +181,7 @@ export function NotesTab({ currentMemberId }: NotesTabProps) {
             className="h-9 w-9 shrink-0 rounded-full"
             onClick={handleSend}
             disabled={!content.trim() || isSending}
+            aria-label="Send note"
           >
             {isSending ? (
               <Loader2 className="h-4 w-4 animate-spin" />

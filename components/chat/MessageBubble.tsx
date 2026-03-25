@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, isValid } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import type { Message, Member } from '@/lib/types'
@@ -61,10 +61,13 @@ export function MessageBubble({
   }
 
   const initials = member
-    ? `${member.first_name[0]}${member.last_name[0]}`
+    ? `${member.first_name?.[0] ?? ''}${member.last_name?.[0] ?? ''}`
     : '?'
 
-  const timeAgo = formatDistanceToNow(new Date(message.created_at), { addSuffix: true })
+  const createdDate = new Date(message.created_at)
+  const timeAgo = isValid(createdDate)
+    ? formatDistanceToNow(createdDate, { addSuffix: true })
+    : ''
 
   const handleMouseEnter = () => {
     if (actionTimeoutRef.current) clearTimeout(actionTimeoutRef.current)
@@ -170,7 +173,7 @@ export function MessageBubble({
         )}
 
         {/* Audio message */}
-        {message.type === 'audio' && message.media && message.media.length > 0 && (
+        {message.type === 'audio' && message.media && message.media.length > 0 && message.media[0]?.url && (
           <div
             className={cn(
               'flex items-center gap-2 rounded-2xl px-4 py-2.5',

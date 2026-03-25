@@ -23,6 +23,7 @@ export function VoiceRecorder({ onSend }: VoiceRecorderProps) {
   const chunksRef = useRef<Blob[]>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const cancelledRef = useRef(false)
 
   useEffect(() => {
     return () => {
@@ -35,12 +36,26 @@ export function VoiceRecorder({ onSend }: VoiceRecorderProps) {
 
   const startRecording = useCallback(async () => {
     try {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        toast.error('Voice recording is not supported on this device')
+        return
+      }
+
+      const permState = await navigator.permissions?.query({ name: 'microphone' as PermissionName }).catch(() => null)
+      if (permState?.state === 'denied') {
+        toast.error('Microphone access is blocked. Please enable it in your browser settings.')
+        return
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
+      cancelledRef.current = false
 
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
-        : 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : 'audio/mp4'
 
       const recorder = new MediaRecorder(stream, { mimeType })
       mediaRecorderRef.current = recorder
@@ -51,19 +66,26 @@ export function VoiceRecorder({ onSend }: VoiceRecorderProps) {
       }
 
       recorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
         stream.getTracks().forEach((t) => t.stop())
         streamRef.current = null
 
+        if (cancelledRef.current) {
+          cancelledRef.current = false
+          return
+        }
+
+        const blob = new Blob(chunksRef.current, { type: mimeType })
+
         if (blob.size < 1000) {
-          toast.error('Recording too short')
+          toast.error('Recording too short -- hold for at least 1 second')
           return
         }
 
         setIsUploading(true)
         try {
+          const ext = mimeType.includes('mp4') ? 'mp4' : 'webm'
           const formData = new FormData()
-          formData.append('file', blob, `voice-${Date.now()}.webm`)
+          formData.append('file', blob, `voice-${Date.now()}.${ext}`)
 
           const res = await fetch('/api/upload', {
             method: 'POST',
@@ -91,8 +113,14 @@ export function VoiceRecorder({ onSend }: VoiceRecorderProps) {
       timerRef.current = setInterval(() => {
         setDuration((d) => d + 1)
       }, 1000)
-    } catch {
-      toast.error('Microphone access denied')
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'NotAllowedError') {
+        toast.error('Microphone access denied. Please allow microphone access and try again.')
+      } else if (err instanceof DOMException && err.name === 'NotFoundError') {
+        toast.error('No microphone found on this device.')
+      } else {
+        toast.error('Could not start recording')
+      }
     }
   }, [onSend])
 
@@ -108,9 +136,9 @@ export function VoiceRecorder({ onSend }: VoiceRecorderProps) {
   }, [])
 
   const cancelRecording = useCallback(() => {
+    cancelledRef.current = true
     if (mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.stop()
-      chunksRef.current = []
     }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop())
@@ -120,6 +148,7 @@ export function VoiceRecorder({ onSend }: VoiceRecorderProps) {
       clearInterval(timerRef.current)
       timerRef.current = null
     }
+    chunksRef.current = []
     setIsRecording(false)
     setDuration(0)
   }, [])
@@ -151,6 +180,7 @@ export function VoiceRecorder({ onSend }: VoiceRecorderProps) {
             <button
               onClick={cancelRecording}
               className="rounded-full p-1 text-muted-foreground hover:text-destructive"
+              aria-label="Cancel recording"
             >
               <X className="h-4 w-4" />
             </button>
@@ -178,7 +208,7 @@ export function VoiceRecorder({ onSend }: VoiceRecorderProps) {
             : 'text-muted-foreground'
         )}
         onClick={isRecording ? stopRecording : startRecording}
-        title={isRecording ? 'Stop recording' : 'Record voice note'}
+        aria-label={isRecording ? 'Stop recording' : 'Record voice note'}
       >
         {isRecording ? (
           <Square className="h-4 w-4 fill-current" />
