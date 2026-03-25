@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import imageCompression from 'browser-image-compression'
 import { cn } from '@/lib/utils'
+import { uploadFile } from '@/lib/upload'
 import type { Message, Member } from '@/lib/types'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
@@ -116,7 +117,7 @@ export function MessageComposer({
     if (!files || files.length === 0) return
 
     setIsUploading(true)
-    const uploadedMedia: { url: string; type: 'image' | 'video'; sizeBytes?: number }[] = []
+    const uploadedMedia: { url: string; type: 'image' | 'video' | 'audio'; sizeBytes?: number }[] = []
 
     try {
       for (const file of Array.from(files)) {
@@ -134,18 +135,8 @@ export function MessageComposer({
 
         setUploadProgress(isVideo ? 'Uploading video...' : 'Uploading image...')
 
-        const formData = new FormData()
-        formData.append('file', fileToUpload, file.name)
-
-        const res = await fetch('/api/upload', { method: 'POST', body: formData })
-
-        if (!res.ok) {
-          const err = await res.json()
-          throw new Error(err.error || 'Upload failed')
-        }
-
-        const data = await res.json()
-        uploadedMedia.push(data)
+        const result = await uploadFile(fileToUpload, file.name)
+        uploadedMedia.push(result)
       }
 
       await onSend({

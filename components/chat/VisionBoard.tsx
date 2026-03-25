@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import Image from 'next/image'
 import imageCompression from 'browser-image-compression'
+import { uploadFile } from '@/lib/upload'
 import type { VisionBoardItem, Member } from '@/lib/types'
 import { STICKY_NOTE_COLORS } from '@/lib/types'
 import { Button } from '@/components/ui/button'
@@ -432,12 +433,7 @@ function AddItemDialog({
         })
       }
 
-      const formData = new FormData()
-      formData.append('file', fileToUpload, file.name)
-
-      const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData })
-      if (!uploadRes.ok) throw new Error('Upload failed')
-      const { url } = await uploadRes.json()
+      const { url } = await uploadFile(fileToUpload, file.name)
 
       const res = await fetch('/api/vision-board', {
         method: 'POST',

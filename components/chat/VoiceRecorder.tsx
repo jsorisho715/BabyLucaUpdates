@@ -6,6 +6,7 @@ import { Mic, Square, X, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { uploadFile } from '@/lib/upload'
 
 interface VoiceRecorderProps {
   onSend: (data: {
@@ -84,21 +85,11 @@ export function VoiceRecorder({ onSend }: VoiceRecorderProps) {
         setIsUploading(true)
         try {
           const ext = mimeType.includes('mp4') ? 'mp4' : 'webm'
-          const formData = new FormData()
-          formData.append('file', blob, `voice-${Date.now()}.${ext}`)
-
-          const res = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-          })
-
-          if (!res.ok) throw new Error('Upload failed')
-
-          const data = await res.json()
+          const result = await uploadFile(blob, `voice-${Date.now()}.${ext}`)
 
           await onSend({
             type: 'audio',
-            mediaUrls: [{ url: data.url, type: 'audio', sizeBytes: blob.size }],
+            mediaUrls: [{ url: result.url, type: 'audio', sizeBytes: blob.size }],
           })
         } catch {
           toast.error('Failed to send voice note')
