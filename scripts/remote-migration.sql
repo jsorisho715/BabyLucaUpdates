@@ -93,8 +93,7 @@ create table if not exists public.vision_board_items (
   color text default '#FEF3C7',
   width float default 200,
   height float default 200,
-  created_at timestamptz default now(),
-  unique (member_id)
+  created_at timestamptz default now()
 );
 
 -- Baby stats
@@ -144,6 +143,9 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 do $$ begin
   create policy "Anyone can insert messages" on public.messages for insert with check (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "Service role can update messages" on public.messages for update using (true);
 exception when duplicate_object then null; end $$;
 do $$ begin
   create policy "Service role can update messages" on public.messages for update using (true);
@@ -221,8 +223,12 @@ values
   ('Jordyn', 'Stubblefield', 'jordyn.stubblefield@gmail.com', true, '#D96B8F')
 on conflict (email) do nothing;
 
--- Default baby stats row
-insert into public.baby_stats (name) values ('Luca') on conflict do nothing;
+-- Default baby stats row (only insert if table is empty)
+do $$ begin
+  if not exists (select 1 from public.baby_stats limit 1) then
+    insert into public.baby_stats (name) values ('Luca');
+  end if;
+end $$;
 
 -- Storage bucket for media uploads
 insert into storage.buckets (id, name, public, file_size_limit)

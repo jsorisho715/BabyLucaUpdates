@@ -6,6 +6,7 @@ import type { Message, Member } from '@/lib/types'
 
 interface UseRealtimeChatProps {
   onNewMessage: (message: Message) => void
+  onMessageUpdate: (messageId: string, updates: Partial<Message>) => void
   onNewMember: (member: Member) => void
   onReactionChange: (messageId: string) => void
   onCelebration: () => void
@@ -14,6 +15,7 @@ interface UseRealtimeChatProps {
 
 export function useRealtimeChat({
   onNewMessage,
+  onMessageUpdate,
   onNewMember,
   onReactionChange,
   onCelebration,
@@ -62,6 +64,16 @@ export function useRealtimeChat({
 
           if (fullMessage) {
             onNewMessage({ ...fullMessage, reactions: [] } as unknown as Message)
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages' },
+        (payload) => {
+          const updated = payload.new as { id: string; is_pinned?: boolean }
+          if (updated.id) {
+            onMessageUpdate(updated.id, { is_pinned: updated.is_pinned })
           }
         }
       )

@@ -4,8 +4,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 
 const sendMessageSchema = z.object({
-  content: z.string().optional(),
-  type: z.enum(['text', 'image', 'video', 'audio', 'system']).default('text'),
+  content: z.string().max(5000).optional(),
+  type: z.enum(['text', 'image', 'video', 'audio']).default('text'),
   replyToId: z.string().uuid().optional().nullable(),
   mediaUrls: z.array(z.object({
     url: z.string().url(),

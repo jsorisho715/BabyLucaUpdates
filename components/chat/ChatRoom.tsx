@@ -60,8 +60,15 @@ export function ChatRoom({ session }: ChatRoomProps) {
     }
   }, [addMessage, session.memberId, playNotificationSound])
 
+  const handleMessageUpdate = useCallback((messageId: string, updates: Partial<Message>) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, ...updates } : m))
+    )
+  }, [setMessages])
+
   const { sendCelebration, onlineCount } = useRealtimeChat({
     onNewMessage: handleNewMessage,
+    onMessageUpdate: handleMessageUpdate,
     onNewMember: (member) => {
       setMembers((prev) => {
         if (prev.some((m) => m.id === member.id)) return prev

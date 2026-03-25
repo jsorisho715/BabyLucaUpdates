@@ -25,7 +25,8 @@ export async function POST(request: Request) {
 
     const { firstName, lastName, email, password } = parsed.data
 
-    if (password !== (process.env.CHAT_PASSWORD || 'Luca26')) {
+    const expectedPassword = (process.env.CHAT_PASSWORD || 'Luca26').trim()
+    if (password.trim() !== expectedPassword) {
       return NextResponse.json(
         { error: 'Incorrect password. Please try again.' },
         { status: 403 }
