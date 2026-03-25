@@ -49,3 +49,6 @@ next-env.d.ts
 
 # Docker
 docker-compose.override.yml
+
+# GitHub workflows (PAT lacks workflow scope)
+.github/workflows/

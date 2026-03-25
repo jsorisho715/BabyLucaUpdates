@@ -30,15 +30,17 @@ export async function POST(request: Request) {
       'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav',
     ]
 
-    if (!allowedTypes.includes(file.type)) {
+    const fileBaseType = file.type.split(';')[0].trim()
+
+    if (!allowedTypes.includes(fileBaseType)) {
       return NextResponse.json(
         { error: 'File type not supported' },
         { status: 400 }
       )
     }
 
-    const isVideo = file.type.startsWith('video/')
-    const isAudio = file.type.startsWith('audio/')
+    const isVideo = fileBaseType.startsWith('video/')
+    const isAudio = fileBaseType.startsWith('audio/')
     const ext = file.name.split('.').pop() || (isAudio ? 'webm' : isVideo ? 'mp4' : 'jpg')
     const timestamp = Date.now()
     const randomId = Math.random().toString(36).substring(2, 8)
