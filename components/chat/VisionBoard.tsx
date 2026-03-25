@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import {
   Plus, Image as ImageIcon, StickyNote, ZoomIn, ZoomOut,
-  Loader2, X, Sparkles,
+  Loader2, X, Sparkles, GripVertical,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -41,6 +41,7 @@ export function VisionBoard({ currentMemberId }: VisionBoardProps) {
   const lastTouchDistRef = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const dragStartRef = useRef({ x: 0, y: 0 })
+  const dragItemIdRef = useRef<string | null>(null)
 
   const BOARD_W = 2000
   const BOARD_H = 2000
@@ -75,6 +76,7 @@ export function VisionBoard({ currentMemberId }: VisionBoardProps) {
     return () => { supabase.removeChannel(channel) }
   }, [fetchItems])
 
+  // Wheel zoom via native listener (non-passive)
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -89,6 +91,66 @@ export function VisionBoard({ currentMemberId }: VisionBoardProps) {
     return () => el.removeEventListener('wheel', onWheel)
   }, [])
 
+  // Global pointer tracking for dragging items (like Figma)
+  useEffect(() => {
+    const handleGlobalMove = (e: PointerEvent) => {
+      const id = dragItemIdRef.current
+      if (!id) return
+      e.preventDefault()
+
+      const dx = (e.clientX - dragStartRef.current.x) / scale
+      const dy = (e.clientY - dragStartRef.current.y) / scale
+      dragStartRef.current = { x: e.clientX, y: e.clientY }
+
+      setItems((prev) =>
+        prev.map((item) => {
+          if (item.id !== id) return item
+          return {
+            ...item,
+            x: Math.max(0.02, Math.min(0.98, item.x + dx / BOARD_W)),
+            y: Math.max(0.02, Math.min(0.98, item.y + dy / BOARD_H)),
+          }
+        })
+      )
+    }
+
+    const handleGlobalUp = async () => {
+      const id = dragItemIdRef.current
+      if (!id) return
+      dragItemIdRef.current = null
+      setDraggingId(null)
+
+      const item = items.find((i) => i.id === id)
+      if (item) {
+        try {
+          await fetch('/api/vision-board', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: item.id, x: item.x, y: item.y }),
+          })
+        } catch {
+          // silently fail
+        }
+      }
+    }
+
+    window.addEventListener('pointermove', handleGlobalMove)
+    window.addEventListener('pointerup', handleGlobalUp)
+    return () => {
+      window.removeEventListener('pointermove', handleGlobalMove)
+      window.removeEventListener('pointerup', handleGlobalUp)
+    }
+  }, [scale, items])
+
+  const startItemDrag = useCallback((itemId: string, e: React.PointerEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragItemIdRef.current = itemId
+    setDraggingId(itemId)
+    dragStartRef.current = { x: e.clientX, y: e.clientY }
+  }, [])
+
+  // Canvas panning
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     const target = e.target as HTMLElement
     if (target.closest('[data-board-item]')) return
@@ -113,6 +175,7 @@ export function VisionBoard({ currentMemberId }: VisionBoardProps) {
     setIsPanning(false)
   }, [])
 
+  // Pinch to zoom
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX
@@ -138,51 +201,6 @@ export function VisionBoard({ currentMemberId }: VisionBoardProps) {
     lastTouchDistRef.current = 0
   }, [])
 
-  const handleItemDragStart = useCallback((itemId: string, e: React.PointerEvent) => {
-    e.stopPropagation()
-    setDraggingId(itemId)
-    dragStartRef.current = { x: e.clientX, y: e.clientY }
-    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-  }, [])
-
-  const handleItemDragMove = useCallback((e: React.PointerEvent) => {
-    if (!draggingId) return
-    e.stopPropagation()
-
-    const dx = (e.clientX - dragStartRef.current.x) / scale
-    const dy = (e.clientY - dragStartRef.current.y) / scale
-    dragStartRef.current = { x: e.clientX, y: e.clientY }
-
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== draggingId) return item
-        return {
-          ...item,
-          x: Math.max(0.05, Math.min(0.95, item.x + dx / BOARD_W)),
-          y: Math.max(0.05, Math.min(0.95, item.y + dy / BOARD_H)),
-        }
-      })
-    )
-  }, [draggingId, scale])
-
-  const handleItemDragEnd = useCallback(async () => {
-    if (!draggingId) return
-    const item = items.find((i) => i.id === draggingId)
-    setDraggingId(null)
-
-    if (item) {
-      try {
-        await fetch('/api/vision-board', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: item.id, x: item.x, y: item.y }),
-        })
-      } catch {
-        // silently fail on position save
-      }
-    }
-  }, [draggingId, items])
-
   const zoomIn = () => setScale((s) => Math.min(3, s + 0.2))
   const zoomOut = () => setScale((s) => Math.max(0.3, s - 0.2))
   const resetView = () => { setScale(1); setTranslate({ x: 0, y: 0 }) }
@@ -199,7 +217,7 @@ export function VisionBoard({ currentMemberId }: VisionBoardProps) {
           <h2 className="text-base font-semibold text-foreground">{"Luca's Vision Board"}</h2>
         </div>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Add up to {MAX_ITEMS_PER_USER} photos or notes for Luca to see when he grows up
+          Add up to {MAX_ITEMS_PER_USER} photos or notes for Luca -- drag your items to rearrange
         </p>
       </div>
 
@@ -247,9 +265,7 @@ export function VisionBoard({ currentMemberId }: VisionBoardProps) {
               boardHeight={BOARD_H}
               isOwn={item.member_id === currentMemberId}
               isDragging={draggingId === item.id}
-              onDragStart={(e) => handleItemDragStart(item.id, e)}
-              onDragMove={handleItemDragMove}
-              onDragEnd={handleItemDragEnd}
+              onDragStart={(e) => startItemDrag(item.id, e)}
             />
           ))}
 
@@ -298,7 +314,6 @@ export function VisionBoard({ currentMemberId }: VisionBoardProps) {
         }
       </motion.button>
 
-      {/* Add dialog */}
       <AddItemDialog
         open={showAddDialog}
         onClose={() => { setShowAddDialog(false); setAddType(null) }}
@@ -315,8 +330,7 @@ export function VisionBoard({ currentMemberId }: VisionBoardProps) {
 }
 
 function BoardItem({
-  item, boardWidth, boardHeight, isOwn, isDragging,
-  onDragStart, onDragMove, onDragEnd,
+  item, boardWidth, boardHeight, isOwn, isDragging, onDragStart,
 }: {
   item: VisionBoardItem
   boardWidth: number
@@ -324,44 +338,46 @@ function BoardItem({
   isOwn: boolean
   isDragging: boolean
   onDragStart: (e: React.PointerEvent) => void
-  onDragMove: (e: React.PointerEvent) => void
-  onDragEnd: () => void
 }) {
   const member = item.member as Member
   const x = item.x * boardWidth
   const y = item.y * boardHeight
 
-  const dragProps = isOwn ? {
-    onPointerDown: onDragStart,
-    onPointerMove: onDragMove,
-    onPointerUp: onDragEnd,
-    style: { cursor: 'grab', ...(isDragging ? { cursor: 'grabbing', zIndex: 50 } : {}) },
-  } : {}
-
   if (item.type === 'note') {
     return (
-      <motion.div
+      <div
         data-board-item
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: isDragging ? 1.05 : 1, opacity: 1 }}
-        className={cn('absolute touch-none', isDragging && 'z-50')}
+        className={cn(
+          'absolute select-none',
+          isDragging && 'z-50',
+          isOwn && 'cursor-grab active:cursor-grabbing',
+        )}
         style={{
           left: x,
           top: y,
-          transform: `translate(-50%, -50%) rotate(${item.rotation}deg)`,
+          transform: `translate(-50%, -50%) rotate(${item.rotation}deg) scale(${isDragging ? 1.05 : 1})`,
           width: 200,
+          transition: isDragging ? 'none' : 'transform 0.15s ease-out',
         }}
-        {...dragProps}
+        onPointerDown={isOwn ? onDragStart : undefined}
       >
         <div
           className={cn(
-            'rounded-lg p-4 shadow-md transition-shadow',
-            isOwn && 'ring-2 ring-primary/20 hover:shadow-lg',
-            isDragging && 'shadow-xl'
+            'rounded-lg p-4 shadow-md',
+            isOwn && 'ring-2 ring-primary/20',
+            isDragging && 'shadow-xl ring-primary/40',
           )}
           style={{ backgroundColor: item.color }}
         >
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800" style={{ fontFamily: "'Caveat', cursive, sans-serif" }}>
+          {isOwn && (
+            <div className="mb-1 flex justify-end">
+              <GripVertical className="h-3.5 w-3.5 text-gray-400" />
+            </div>
+          )}
+          <p
+            className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800"
+            style={{ fontFamily: "'Caveat', cursive, sans-serif", pointerEvents: 'none' }}
+          >
             {item.content}
           </p>
           <div className="mt-2 flex items-center gap-1.5 border-t border-black/5 pt-2">
@@ -374,35 +390,47 @@ function BoardItem({
             <span className="text-[10px] text-gray-600">{member?.first_name}</span>
           </div>
         </div>
-      </motion.div>
+      </div>
     )
   }
 
   return (
-    <motion.div
+    <div
       data-board-item
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: isDragging ? 1.05 : 1, opacity: 1 }}
-      className={cn('absolute touch-none', isDragging && 'z-50')}
+      className={cn(
+        'absolute select-none',
+        isDragging && 'z-50',
+        isOwn && 'cursor-grab active:cursor-grabbing',
+      )}
       style={{
         left: x,
         top: y,
-        transform: `translate(-50%, -50%) rotate(${item.rotation}deg)`,
+        transform: `translate(-50%, -50%) rotate(${item.rotation}deg) scale(${isDragging ? 1.05 : 1})`,
+        transition: isDragging ? 'none' : 'transform 0.15s ease-out',
       }}
-      {...dragProps}
+      onPointerDown={isOwn ? onDragStart : undefined}
     >
-      <div className={cn(
-        'rounded-lg bg-white p-2 shadow-md transition-shadow',
-        isOwn && 'ring-2 ring-primary/20 hover:shadow-lg',
-        isDragging && 'shadow-xl'
-      )} style={{ width: 200 }}>
-        <div className="overflow-hidden rounded">
+      <div
+        className={cn(
+          'rounded-lg bg-white p-2 shadow-md',
+          isOwn && 'ring-2 ring-primary/20',
+          isDragging && 'shadow-xl ring-primary/40',
+        )}
+        style={{ width: 200 }}
+      >
+        {isOwn && (
+          <div className="mb-0.5 flex justify-end px-1">
+            <GripVertical className="h-3.5 w-3.5 text-gray-300" />
+          </div>
+        )}
+        <div className="overflow-hidden rounded" style={{ pointerEvents: 'none' }}>
           <Image
             src={item.content}
             alt={`${member?.first_name}'s photo`}
             width={200}
             height={200}
             className="h-44 w-full object-cover"
+            draggable={false}
           />
         </div>
         <div className="mt-1.5 flex items-center gap-1.5 px-1">
@@ -415,7 +443,7 @@ function BoardItem({
           <span className="text-[10px] text-gray-600">{member?.first_name}</span>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }
 
