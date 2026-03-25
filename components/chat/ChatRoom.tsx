@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 import { useMessages } from '@/hooks/useMessages'
 import { useRealtimeChat } from '@/hooks/useRealtimeChat'
 import type { Message, Member } from '@/lib/types'
@@ -11,16 +12,18 @@ import { MessageComposer } from './MessageComposer'
 import { MediaViewer } from './MediaViewer'
 import { MemberDrawer } from './MemberDrawer'
 import { CelebrationOverlay } from './CelebrationOverlay'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Baby, ArrowDown, Loader2 } from 'lucide-react'
+import { BabyStatsCard } from './BabyStatsCard'
+import { ShareInvite } from './ShareInvite'
+import { Baby, ArrowDown, Loader2, LogOut, Pin } from 'lucide-react'
 import { SessionPayload } from '@/lib/session'
+import { playNotificationSound } from '@/lib/sounds'
 
 interface ChatRoomProps {
   session: SessionPayload
 }
 
 export function ChatRoom({ session }: ChatRoomProps) {
-  const { messages, isLoading, hasMore, fetchMessages, loadMore, addMessage, updateReactions } =
+  const { messages, isLoading, hasMore, fetchMessages, loadMore, addMessage, updateReactions, setMessages } =
     useMessages()
   const [members, setMembers] = useState<Member[]>([])
   const [replyTo, setReplyTo] = useState<Message | null>(null)
@@ -30,6 +33,7 @@ export function ChatRoom({ session }: ChatRoomProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const isNearBottomRef = useRef(true)
+  const router = useRouter()
 
   const handleCelebration = useCallback(() => {
     setCelebrationTrigger((p) => p + 1)
@@ -45,12 +49,19 @@ export function ChatRoom({ session }: ChatRoomProps) {
         updateReactions(messageId, msg.reactions)
       }
     } catch {
-      // silently fail on reaction refresh
+      // silently fail
     }
   }, [updateReactions])
 
+  const handleNewMessage = useCallback((message: Message) => {
+    addMessage(message)
+    if (message.member_id !== session.memberId) {
+      playNotificationSound()
+    }
+  }, [addMessage, session.memberId, playNotificationSound])
+
   const { sendCelebration, onlineCount } = useRealtimeChat({
-    onNewMessage: addMessage,
+    onNewMessage: handleNewMessage,
     onNewMember: (member) => {
       setMembers((prev) => {
         if (prev.some((m) => m.id === member.id)) return prev
@@ -104,9 +115,9 @@ export function ChatRoom({ session }: ChatRoomProps) {
 
   const handleSendMessage = async (data: {
     content?: string
-    type: 'text' | 'image' | 'video'
+    type: 'text' | 'image' | 'video' | 'audio'
     replyToId?: string | null
-    mediaUrls?: { url: string; type: 'image' | 'video'; sizeBytes?: number }[]
+    mediaUrls?: { url: string; type: 'image' | 'video' | 'audio'; sizeBytes?: number }[]
     mentions?: string[]
   }) => {
     const res = await fetch('/api/messages', {
@@ -128,12 +139,42 @@ export function ChatRoom({ session }: ChatRoomProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messageId, emoji }),
       })
-
-      if (!res.ok) {
-        toast.error('Failed to react')
-      }
+      if (!res.ok) toast.error('Failed to react')
     } catch {
       toast.error('Failed to react')
+    }
+  }
+
+  const handlePin = async (messageId: string) => {
+    try {
+      const res = await fetch('/api/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        toast.error(err.error || 'Failed to pin')
+        return
+      }
+
+      const data = await res.json()
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, is_pinned: data.pinned } : m))
+      )
+      toast.success(data.pinned ? 'Message pinned' : 'Message unpinned')
+    } catch {
+      toast.error('Failed to pin')
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', { method: 'POST' })
+      router.push('/')
+    } catch {
+      toast.error('Failed to logout')
     }
   }
 
@@ -144,14 +185,15 @@ export function ChatRoom({ session }: ChatRoomProps) {
     if (!prev || !curr) return false
     if (prev.member_id !== curr.member_id) return false
     if (prev.type === 'system' || curr.type === 'system') return false
-
     const prevTime = new Date(prev.created_at).getTime()
     const currTime = new Date(curr.created_at).getTime()
     return currTime - prevTime < 2 * 60 * 1000
   }
 
+  const pinnedMessages = messages.filter((m) => m.is_pinned)
+
   return (
-    <div className="flex h-dvh flex-col bg-background">
+    <div className="flex h-full flex-col bg-background">
       {/* Header */}
       <header className="flex items-center justify-between border-b bg-white/80 px-4 py-3 backdrop-blur-sm">
         <div className="flex items-center gap-3">
@@ -160,20 +202,46 @@ export function ChatRoom({ session }: ChatRoomProps) {
           </div>
           <div>
             <h1 className="text-base font-semibold text-foreground">{"Luca's Updates"}</h1>
-            <p className="text-xs text-muted-foreground">
-              {onlineCount} online
-            </p>
+            <p className="text-xs text-muted-foreground">{onlineCount} online</p>
           </div>
         </div>
-        <MemberDrawer members={members} onlineCount={onlineCount} />
+        <div className="flex items-center gap-1">
+          <ShareInvite />
+          <MemberDrawer members={members} onlineCount={onlineCount} />
+          <button
+            onClick={handleLogout}
+            className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            title="Logout"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
-      {/* Messages */}
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto"
-      >
+      {/* Messages area */}
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
+        {/* Baby stats card */}
+        <BabyStatsCard isAdmin={session.isAdmin} />
+
+        {/* Pinned messages */}
+        {pinnedMessages.length > 0 && (
+          <div className="mx-4 mt-3 space-y-2">
+            {pinnedMessages.map((msg) => (
+              <div key={`pinned-${msg.id}`} className="flex items-start gap-2 rounded-xl bg-primary/5 px-3 py-2 ring-1 ring-primary/10">
+                <Pin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-primary">
+                    {(msg.member as Member)?.first_name} pinned
+                  </p>
+                  <p className="truncate text-sm text-foreground">
+                    {msg.content || '📷 Photo'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Load more indicator */}
         {isLoading && messages.length > 0 && (
           <div className="flex justify-center py-4">
@@ -209,10 +277,13 @@ export function ChatRoom({ session }: ChatRoomProps) {
               key={message.id}
               message={message}
               currentMemberId={session.memberId}
+              isAdmin={session.isAdmin}
               onReply={setReplyTo}
               onReaction={handleReaction}
-              onMediaClick={(url, type) => setMediaViewer({ url, type })}
+              onMediaClick={(url, type) => { if (type !== 'audio') setMediaViewer({ url, type }) }}
+              onPin={session.isAdmin ? handlePin : undefined}
               isGrouped={isGrouped(index)}
+              isPinned={message.is_pinned}
             />
           ))}
         </div>
@@ -224,7 +295,7 @@ export function ChatRoom({ session }: ChatRoomProps) {
       {showScrollDown && (
         <button
           onClick={scrollToBottom}
-          className="absolute bottom-24 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border bg-white px-4 py-2 text-xs font-medium text-primary shadow-lg transition-transform hover:scale-105"
+          className="absolute bottom-28 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border bg-white px-4 py-2 text-xs font-medium text-primary shadow-lg transition-transform hover:scale-105"
         >
           <ArrowDown className="h-3.5 w-3.5" />
           New messages

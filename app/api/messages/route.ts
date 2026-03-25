@@ -5,11 +5,11 @@ import { z } from 'zod'
 
 const sendMessageSchema = z.object({
   content: z.string().optional(),
-  type: z.enum(['text', 'image', 'video', 'system']).default('text'),
+  type: z.enum(['text', 'image', 'video', 'audio', 'system']).default('text'),
   replyToId: z.string().uuid().optional().nullable(),
   mediaUrls: z.array(z.object({
     url: z.string().url(),
-    type: z.enum(['image', 'video']),
+    type: z.enum(['image', 'video', 'audio']),
     width: z.number().optional(),
     height: z.number().optional(),
     sizeBytes: z.number().optional(),

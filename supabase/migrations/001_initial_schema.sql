@@ -132,8 +132,8 @@ alter publication supabase_realtime add table public.members;
 -- Seed admin users (Jordyn & Johnathan)
 insert into public.members (first_name, last_name, email, is_admin, avatar_color)
 values
-  ('Johnathan', 'Parent', 'johnathan@lucaupdates.com', true, '#4BA3E3'),
-  ('Jordyn', 'Parent', 'jordyn@lucaupdates.com', true, '#D96B8F')
+  ('Johnathan', 'Sorisho', 'johnathan.sorisho@gmail.com', true, '#4BA3E3'),
+  ('Jordyn', 'Stubblefield', 'jordyn.stubblefield@gmail.com', true, '#D96B8F')
 on conflict (email) do nothing;
 
 -- Create storage bucket for media

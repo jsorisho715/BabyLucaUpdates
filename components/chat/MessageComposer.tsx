@@ -9,16 +9,17 @@ import type { Message, Member } from '@/lib/types'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import {
-  Send, Image as ImageIcon, X, PartyPopper, Loader2, Paperclip,
+  Send, Image as ImageIcon, X, PartyPopper, Loader2,
 } from 'lucide-react'
 import { MentionAutocomplete } from './MentionAutocomplete'
+import { VoiceRecorder } from './VoiceRecorder'
 
 interface MessageComposerProps {
   onSend: (data: {
     content?: string
-    type: 'text' | 'image' | 'video'
+    type: 'text' | 'image' | 'video' | 'audio'
     replyToId?: string | null
-    mediaUrls?: { url: string; type: 'image' | 'video'; sizeBytes?: number }[]
+    mediaUrls?: { url: string; type: 'image' | 'video' | 'audio'; sizeBytes?: number }[]
     mentions?: string[]
   }) => Promise<void>
   replyTo: Message | null
@@ -81,7 +82,6 @@ export function MessageComposer({
 
   const handleContentChange = (value: string) => {
     setContent(value)
-
     const cursorPos = textareaRef.current?.selectionStart || 0
     const textBeforeCursor = value.slice(0, cursorPos)
     const mentionMatch = textBeforeCursor.match(/@(\w*)$/)
@@ -137,10 +137,7 @@ export function MessageComposer({
         const formData = new FormData()
         formData.append('file', fileToUpload, file.name)
 
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        })
+        const res = await fetch('/api/upload', { method: 'POST', body: formData })
 
         if (!res.ok) {
           const err = await res.json()
@@ -153,7 +150,7 @@ export function MessageComposer({
 
       await onSend({
         content: content.trim() || undefined,
-        type: uploadedMedia[0].type,
+        type: uploadedMedia[0].type as 'image' | 'video',
         replyToId: replyTo?.id || null,
         mediaUrls: uploadedMedia,
       })
@@ -230,8 +227,8 @@ export function MessageComposer({
       </AnimatePresence>
 
       {/* Composer */}
-      <div className="flex items-end gap-2 p-3">
-        <div className="flex gap-1">
+      <div className="flex items-end gap-1.5 p-3">
+        <div className="flex gap-0.5">
           <input
             ref={fileInputRef}
             type="file"
@@ -247,17 +244,9 @@ export function MessageComposer({
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
           >
-            <Paperclip className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 shrink-0 text-muted-foreground"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-          >
             <ImageIcon className="h-5 w-5" />
           </Button>
+          <VoiceRecorder onSend={onSend} />
         </div>
 
         <Textarea
@@ -273,7 +262,7 @@ export function MessageComposer({
           )}
         />
 
-        <div className="flex gap-1">
+        <div className="flex gap-0.5">
           <Button
             variant="ghost"
             size="icon"

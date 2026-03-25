@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     const allowedTypes = [
       'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif',
       'video/mp4', 'video/webm', 'video/quicktime', 'video/3gpp',
+      'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav',
     ]
 
     if (!allowedTypes.includes(file.type)) {
@@ -37,7 +38,8 @@ export async function POST(request: Request) {
     }
 
     const isVideo = file.type.startsWith('video/')
-    const ext = file.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg')
+    const isAudio = file.type.startsWith('audio/')
+    const ext = file.name.split('.').pop() || (isAudio ? 'webm' : isVideo ? 'mp4' : 'jpg')
     const timestamp = Date.now()
     const randomId = Math.random().toString(36).substring(2, 8)
     const fileName = `${session.memberId}/${timestamp}-${randomId}.${ext}`
@@ -68,7 +70,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       url: publicUrl,
-      type: isVideo ? 'video' : 'image',
+      type: isAudio ? 'audio' : isVideo ? 'video' : 'image',
       sizeBytes: file.size,
     })
   } catch (error) {
