@@ -3,6 +3,7 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -27,12 +28,15 @@ export function MemberDrawer({ members, onlineCount }: MemberDrawerProps) {
           <span className="h-2 w-2 rounded-full bg-green-400" title={`${onlineCount} online`} />
         </button>
       </DialogTrigger>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm" aria-describedby="members-dialog-desc">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
             Family & Friends
           </DialogTitle>
+          <DialogDescription id="members-dialog-desc">
+            Everyone following along with Luca&apos;s journey
+          </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh]">
           <div className="space-y-1 pr-4">

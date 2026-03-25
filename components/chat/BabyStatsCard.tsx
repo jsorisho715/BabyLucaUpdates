@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { Baby, Scale, Ruler, Clock, Edit2, Loader2 } from 'lucide-react'
 
@@ -200,12 +200,15 @@ function EditStatsDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm" aria-describedby="baby-stats-dialog-desc">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Baby className="h-5 w-5 text-primary" />
             Baby Stats
           </DialogTitle>
+          <DialogDescription id="baby-stats-dialog-desc">
+            Fill in the details to announce Luca&apos;s arrival
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 pt-2">

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,12 +50,15 @@ export function ShareInvite() {
           <Share2 className="h-4 w-4" />
         </button>
       </DialogTrigger>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm" aria-describedby="share-dialog-desc">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Share2 className="h-5 w-5 text-primary" />
             Invite Family & Friends
           </DialogTitle>
+          <DialogDescription id="share-dialog-desc">
+            Share this link so others can follow along
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">

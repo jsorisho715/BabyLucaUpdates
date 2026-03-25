@@ -55,10 +55,17 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient()
 
-    await supabase
+    const { count } = await supabase
       .from('vision_board_items')
-      .delete()
+      .select('*', { count: 'exact', head: true })
       .eq('member_id', session.memberId)
+
+    if ((count ?? 0) >= 3) {
+      return NextResponse.json(
+        { error: 'You can add up to 3 items to the board' },
+        { status: 400 }
+      )
+    }
 
     const rotation = parsed.data.rotation || (Math.random() * 10 - 5)
 
