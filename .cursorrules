@@ -1,0 +1,83 @@
+# Project Rules — Real Tech LLC WebApp
+
+## Stack
+- Next.js 16 (App Router), React 19, TypeScript strict
+- Tailwind CSS v4 (PostCSS plugin, CSS-first config — no tailwind.config file)
+- shadcn/ui (new-york style, Radix primitives, Lucide icons, CVA + clsx + tailwind-merge)
+- Supabase (PostgreSQL, Auth via @supabase/ssr, Storage, Edge Functions)
+- Resend for transactional email
+- Zod for validation everywhere (forms, API routes, env parsing)
+- Framer Motion for animations
+- Vitest + Playwright for testing
+
+## Code Style
+- No semicolons, single quotes, 2-space indent, trailing commas (es5), 100 char width
+- `@/*` import alias maps to project root
+- Server Components by default — only `"use client"` when interactivity requires it
+- Always read the PRD.md before making changes (if one exists)
+- Do not update the UI unless explicitly asked
+- Optimize for mobile (375px min) and desktop at all times
+
+## File Structure
+- `app/` — Next.js App Router pages and API routes
+- `components/ui/` — shadcn/ui auto-generated components (do not edit manually)
+- `components/[feature]/` — feature-specific components
+- `lib/supabase/client.ts` — browser Supabase client (`createClient()`)
+- `lib/supabase/server.ts` — server Supabase client (`createClient()`) + admin client (`createAdminClient()`)
+- `lib/supabase/middleware.ts` — `updateSession()` for auth token refresh
+- `lib/utils.ts` — `cn()` helper and shared utilities
+- `hooks/` — custom React hooks
+- `middleware.ts` — root middleware for auth + route protection
+
+## Supabase Patterns
+- Use `createClient()` from `lib/supabase/server.ts` in Server Components and API routes
+- Use `createClient()` from `lib/supabase/client.ts` in Client Components
+- Use `createAdminClient()` only server-side for admin operations (bypasses RLS)
+- Always create a new client per request (never store in globals)
+- Enable RLS on every table — no exceptions
+- Generate types: `supabase gen types typescript --local > lib/database.types.ts`
+
+## API Routes
+- Always authenticate: `const { data: { user } } = await supabase.auth.getUser()`
+- Return 401 for unauthenticated, 403 for unauthorized, 400 for validation errors
+- Validate request bodies with Zod schemas
+- Use `NextResponse.json()` for responses
+
+## Component Patterns
+- Use shadcn/ui components as building blocks
+- Compose with `cn()` for conditional classes
+- Accept `className?: string` prop for composability
+- Use `react-hook-form` + `@hookform/resolvers/zod` for forms
+- Use `sonner` for toast notifications (not shadcn toast)
+- Use `framer-motion` for animations (AnimatePresence, motion.div)
+
+## CSS / Styling
+- Tailwind v4: use `@import "tailwindcss"` in globals.css, configure via `@theme inline {}`
+- Use CSS variables for theming and brand colors
+- Use semantic class names from shadcn (e.g., `bg-background`, `text-foreground`, `border-border`)
+- Support dark mode via `next-themes` and `.dark` class
+- Brand variables in env: `NEXT_PUBLIC_BRAND_NAME`, `NEXT_PUBLIC_BRAND_SHORT`, etc.
+
+## Security
+- Security headers configured in `next.config.ts` (HSTS, CSP, X-Frame-Options, etc.)
+- Never commit `.env` or `.env.local`
+- Never expose `SUPABASE_SERVICE_ROLE_KEY` to client
+- Validate all user inputs with Zod
+- Use parameterized queries via Supabase client (never raw SQL from user input)
+
+## Testing
+- Unit tests: Vitest + Testing Library, files named `*.test.ts` / `*.test.tsx`
+- E2E tests: Playwright, files in `e2e/` or `tests/`
+- Run `pnpm test` for unit, `pnpm test:e2e` for E2E
+
+## Deployment
+- Primary: Vercel (auto-deploy from GitHub)
+- Docker available for self-hosted or local dev
+- CI/CD via GitHub Actions (lint → test → build → deploy)
+
+## Common Integrations
+- **Email:** `resend` package, env: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`
+- **Payments:** `stripe` package, env: `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- **AI:** `@anthropic-ai/sdk`, env: `ANTHROPIC_API_KEY`, `AI_PROVIDER`, `AI_MODEL`
+- **Analytics:** `@vercel/analytics` or GA4 via `GOOGLE_ANALYTICS_PROPERTY_ID`
+- **Automation:** n8n webhooks via `N8N_INTEGRATION_TOKEN`
