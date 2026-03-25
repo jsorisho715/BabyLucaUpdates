@@ -7,10 +7,17 @@ export const metadata: Metadata = {
   title: "Luca's Updates — Welcome to the World",
   description:
     'Follow along as Baby Luca makes his grand entrance. Real-time updates from Jordyn & Johnathan.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   openGraph: {
     title: "Luca's Updates",
-    description: 'Follow along as Baby Luca makes his grand entrance.',
+    description: 'Follow along as Baby Luca makes his grand entrance into the world.',
     type: 'website',
+    siteName: "Luca's Updates",
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "Luca's Updates",
+    description: 'Follow along as Baby Luca makes his grand entrance into the world.',
   },
 }
 

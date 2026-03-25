@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
+import { toast } from 'sonner'
 import type { Message } from '@/lib/types'
 
 export function useMessages() {
@@ -34,6 +35,9 @@ export function useMessages() {
       setHasMore(data.hasMore)
     } catch (error) {
       console.error('Failed to fetch messages:', error)
+      if (!cursor) {
+        toast.error('Failed to load messages. Pull down to retry.')
+      }
     } finally {
       setIsLoading(false)
       loadingRef.current = false

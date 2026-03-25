@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import Image from 'next/image'
 import imageCompression from 'browser-image-compression'
 import { uploadFile } from '@/lib/upload'
+import { createClient } from '@/lib/supabase/client'
 import type { VisionBoardItem, Member } from '@/lib/types'
 import { STICKY_NOTE_COLORS } from '@/lib/types'
 import { Button } from '@/components/ui/button'
@@ -58,7 +59,21 @@ export function VisionBoard({ currentMemberId }: VisionBoardProps) {
     }
   }, [])
 
-  useEffect(() => { fetchItems() }, [fetchItems])
+  useEffect(() => {
+    fetchItems()
+
+    const supabase = createClient()
+    const channel = supabase
+      .channel('vision-board-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'vision_board_items' },
+        () => { fetchItems() }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [fetchItems])
 
   useEffect(() => {
     const el = containerRef.current

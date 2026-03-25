@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const cursor = searchParams.get('cursor')
+  const messageId = searchParams.get('messageId')
   const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
 
   const supabase = createAdminClient()
@@ -45,7 +46,9 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(limit)
 
-  if (cursor) {
+  if (messageId) {
+    query = query.eq('id', messageId)
+  } else if (cursor) {
     query = query.lt('created_at', cursor)
   }
 

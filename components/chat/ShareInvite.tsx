@@ -91,7 +91,9 @@ export function ShareInvite() {
 
           <div className="rounded-lg bg-muted/50 p-3 text-center">
             <p className="text-xs text-muted-foreground">
-              Password: <span className="font-semibold text-foreground">Luca26</span>
+              Password: <span className="font-semibold text-foreground">
+                {process.env.NEXT_PUBLIC_CHAT_PASSWORD || 'Luca26'}
+              </span>
             </p>
           </div>
         </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, type KeyboardEvent } from 'react'
+import { useState, useRef, useCallback, useEffect, type KeyboardEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import imageCompression from 'browser-image-compression'
@@ -158,8 +158,28 @@ export function MessageComposer({
     }
   }
 
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+
+    const handleResize = () => {
+      const offset = window.innerHeight - vv.height
+      const composer = document.getElementById('message-composer')
+      if (composer) {
+        composer.style.transform = offset > 0 ? `translateY(-${offset}px)` : ''
+      }
+    }
+
+    vv.addEventListener('resize', handleResize)
+    vv.addEventListener('scroll', handleResize)
+    return () => {
+      vv.removeEventListener('resize', handleResize)
+      vv.removeEventListener('scroll', handleResize)
+    }
+  }, [])
+
   return (
-    <div className="border-t bg-white/80 backdrop-blur-sm">
+    <div id="message-composer" className="border-t bg-white/80 backdrop-blur-sm transition-transform">
       {/* Reply preview */}
       <AnimatePresence>
         {replyTo && (

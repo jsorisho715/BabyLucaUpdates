@@ -200,7 +200,7 @@ export function ChatRoom({ session }: ChatRoomProps) {
   const pinnedMessages = messages.filter((m) => m.is_pinned)
 
   return (
-    <div className="flex h-full flex-col bg-background">
+    <div className="relative flex h-full flex-col bg-background">
       {/* Header */}
       <header className="flex items-center justify-between border-b bg-white/80 px-4 py-3 backdrop-blur-sm">
         <div className="flex items-center gap-3">

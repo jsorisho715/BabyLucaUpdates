@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import type { Member } from '@/lib/types'
 
@@ -16,16 +17,22 @@ export function MentionAutocomplete({
   onSelect,
   onClose,
 }: MentionAutocompleteProps) {
-  const filtered = members.filter((m) =>
-    `${m.first_name} ${m.last_name}`
-      .toLowerCase()
-      .includes(query.toLowerCase())
+  const filtered = useMemo(() =>
+    members.filter((m) =>
+      `${m.first_name} ${m.last_name}`
+        .toLowerCase()
+        .includes(query.toLowerCase())
+    ),
+    [members, query]
   )
 
-  if (filtered.length === 0) {
-    onClose()
-    return null
-  }
+  useEffect(() => {
+    if (filtered.length === 0) {
+      onClose()
+    }
+  }, [filtered.length, onClose])
+
+  if (filtered.length === 0) return null
 
   return (
     <motion.div
@@ -45,7 +52,7 @@ export function MentionAutocomplete({
               className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold text-white"
               style={{ backgroundColor: member.avatar_color }}
             >
-              {member.first_name[0]}{member.last_name[0]}
+              {member.first_name?.[0]}{member.last_name?.[0]}
             </div>
             <span className="font-medium">
               {member.first_name} {member.last_name}
