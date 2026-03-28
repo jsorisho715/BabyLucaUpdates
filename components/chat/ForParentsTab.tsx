@@ -418,7 +418,7 @@ export function ForParentsTab({ currentMemberId, isAdmin }: ForParentsTabProps) 
                 value={signUpDate}
                 onChange={(e) => setSignUpDate(e.target.value)}
                 className="rounded-xl"
-                min={new Date().toISOString().split('T')[0]}
+                min="2025-04-07"
               />
               <p className="mt-1 text-[11px] text-muted-foreground">
                 Leave empty for &quot;anytime / flexible&quot;
