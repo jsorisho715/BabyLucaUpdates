@@ -10,9 +10,9 @@ interface TabBarProps {
 }
 
 const tabs: { id: TabType; label: string; icon: typeof MessageSquare }[] = [
-  { id: 'chat', label: 'Chat', icon: MessageSquare },
-  { id: 'notes', label: 'Notes', icon: Heart },
-  { id: 'board', label: 'Vision Board', icon: Sparkles },
+  { id: 'chat', label: 'Chats', icon: MessageSquare },
+  { id: 'notes', label: 'Notes for Parents', icon: Heart },
+  { id: 'board', label: "Luca's Notes", icon: Sparkles },
 ]
 
 export function TabBar({ active, onChange }: TabBarProps) {
