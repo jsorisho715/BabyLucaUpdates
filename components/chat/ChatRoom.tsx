@@ -145,6 +145,34 @@ export function ChatRoom({ session }: ChatRoomProps) {
   }
 
   const handleReaction = async (messageId: string, emoji: string) => {
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== messageId) return m
+        const reactions = [...(m.reactions || [])]
+        const idx = reactions.findIndex((r) => r.emoji === emoji)
+        if (idx >= 0) {
+          const r = reactions[idx]
+          if (r.hasReacted) {
+            if (r.count <= 1) {
+              reactions.splice(idx, 1)
+            } else {
+              reactions[idx] = { ...r, count: r.count - 1, hasReacted: false }
+            }
+          } else {
+            reactions[idx] = { ...r, count: r.count + 1, hasReacted: true }
+          }
+        } else {
+          reactions.push({
+            emoji,
+            count: 1,
+            members: [{ id: session.memberId, first_name: 'You' }],
+            hasReacted: true,
+          })
+        }
+        return { ...m, reactions }
+      })
+    )
+
     try {
       const res = await fetch('/api/reactions', {
         method: 'POST',
