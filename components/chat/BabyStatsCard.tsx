@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
-import { Baby, Scale, Ruler, Clock, Edit2, Loader2 } from 'lucide-react'
+import { Baby, Scale, Ruler, Clock, Edit2, Loader2, Trash2 } from 'lucide-react'
 
 interface BabyStatsCardProps {
   isAdmin: boolean
@@ -198,6 +198,35 @@ function EditStatsDialog({
     }
   }
 
+  const handleClearAll = async () => {
+    setIsSaving(true)
+    try {
+      const res = await fetch('/api/baby-stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Luca',
+          birth_date: null,
+          weight_lbs: null,
+          weight_oz: null,
+          length_inches: null,
+          notes: null,
+        }),
+      })
+
+      if (!res.ok) throw new Error('Failed')
+      const data = await res.json()
+      onSave(data.stats)
+      setForm(getFormDefaults(data.stats))
+      onClose()
+      toast.success('Baby stats cleared!')
+    } catch {
+      toast.error('Failed to clear stats')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-sm" aria-describedby="baby-stats-dialog-desc">
@@ -274,6 +303,15 @@ function EditStatsDialog({
           <Button className="w-full" onClick={handleSave} disabled={isSaving}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             {isSaving ? 'Saving...' : 'Save Stats'}
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full text-destructive hover:text-destructive"
+            onClick={handleClearAll}
+            disabled={isSaving}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Clear All Details
           </Button>
         </div>
       </DialogContent>

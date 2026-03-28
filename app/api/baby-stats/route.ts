@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 const statsSchema = z.object({
   name: z.string().min(1).optional(),
-  birth_date: z.string().optional(),
+  birth_date: z.string().nullable().optional(),
   weight_lbs: z.number().min(0).max(20).optional().nullable(),
   weight_oz: z.number().min(0).max(16).optional().nullable(),
   length_inches: z.number().min(0).max(30).optional().nullable(),
