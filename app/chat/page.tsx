@@ -29,14 +29,14 @@ export default function ChatPage() {
 
   if (isLoading || !session) {
     return (
-      <div className="flex h-dvh items-center justify-center bg-background">
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-background pb-[52px]">
+    <div className="fixed inset-0 flex flex-col bg-background pb-[52px]">
       {/* Tab content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'chat' && <ChatRoom session={session} />}
