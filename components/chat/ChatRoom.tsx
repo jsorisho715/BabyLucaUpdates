@@ -336,15 +336,17 @@ export function ChatRoom({ session }: ChatRoomProps) {
         </button>
       )}
 
-      {/* Composer */}
-      <MessageComposer
-        onSend={handleSendMessage}
-        replyTo={replyTo}
-        onCancelReply={() => setReplyTo(null)}
-        onCelebrate={sendCelebration}
-        members={members}
-        currentMemberId={session.memberId}
-      />
+      {/* Composer — parents only */}
+      {session.isAdmin && (
+        <MessageComposer
+          onSend={handleSendMessage}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          onCelebrate={sendCelebration}
+          members={members}
+          currentMemberId={session.memberId}
+        />
+      )}
 
       {/* Celebration overlay */}
       <CelebrationOverlay trigger={celebrationTrigger} />

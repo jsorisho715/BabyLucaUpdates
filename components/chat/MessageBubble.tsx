@@ -248,13 +248,15 @@ export function MessageBubble({
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
             >
-              <button
-                onClick={(e) => { e.stopPropagation(); onReply(message) }}
-                className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label="Reply"
-              >
-                <Reply className="h-3.5 w-3.5" />
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onReply(message) }}
+                  className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label="Reply"
+                >
+                  <Reply className="h-3.5 w-3.5" />
+                </button>
+              )}
               <button
                 onClick={(e) => { e.stopPropagation(); setShowReactionPicker(!showReactionPicker) }}
                 className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
