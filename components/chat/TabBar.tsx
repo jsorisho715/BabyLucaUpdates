@@ -17,7 +17,7 @@ const tabs: { id: TabType; label: string; icon: typeof MessageSquare }[] = [
 
 export function TabBar({ active, onChange }: TabBarProps) {
   return (
-    <nav className="pb-safe flex items-center border-t bg-white/90 backdrop-blur-md">
+    <nav className="pb-safe fixed bottom-0 left-0 right-0 z-50 flex items-center border-t bg-white/90 backdrop-blur-md">
       {tabs.map(({ id, label, icon: Icon }) => (
         <button
           key={id}

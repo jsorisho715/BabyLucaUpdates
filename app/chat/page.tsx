@@ -36,7 +36,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-background">
+    <div className="flex h-dvh flex-col bg-background pb-[52px]">
       {/* Tab content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'chat' && <ChatRoom session={session} />}
