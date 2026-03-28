@@ -288,7 +288,7 @@ export function ForParentsTab({ currentMemberId, isAdmin }: ForParentsTabProps) 
                                 </span>
                               )}
                             </span>
-                            {isOwn && (
+                            {(isOwn || isAdmin) && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()

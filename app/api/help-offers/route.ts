@@ -9,6 +9,12 @@ const createSchema = z.object({
   note: z.string().max(500).optional(),
 })
 
+const updateSchema = z.object({
+  id: z.string().uuid(),
+  availableDate: z.string().nullable().optional(),
+  note: z.string().max(500).optional(),
+})
+
 const deleteSchema = z.object({
   id: z.string().uuid(),
 })
@@ -73,6 +79,45 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PATCH(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const body = await request.json()
+    const parsed = updateSchema.safeParse(body)
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
+    }
+
+    const supabase = createAdminClient()
+
+    const updates: Record<string, unknown> = {}
+    if (parsed.data.availableDate !== undefined) updates.available_date = parsed.data.availableDate
+    if (parsed.data.note !== undefined) updates.note = parsed.data.note || null
+
+    const { data: offer, error } = await supabase
+      .from('help_offers')
+      .update(updates)
+      .eq('id', parsed.data.id)
+      .eq('member_id', session.memberId)
+      .select('*, member:members!member_id(id, first_name, last_name, avatar_color)')
+      .single()
+
+    if (error) {
+      console.error('Failed to update help offer:', error)
+      return NextResponse.json({ error: 'Failed to update' }, { status: 500 })
+    }
+
+    return NextResponse.json({ offer })
+  } catch {
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
+  }
+}
+
 export async function DELETE(request: Request) {
   const session = await getSession()
   if (!session) {
@@ -89,11 +134,16 @@ export async function DELETE(request: Request) {
 
     const supabase = createAdminClient()
 
-    const { error } = await supabase
+    let query = supabase
       .from('help_offers')
       .delete()
       .eq('id', parsed.data.id)
-      .eq('member_id', session.memberId)
+
+    if (!session.isAdmin) {
+      query = query.eq('member_id', session.memberId)
+    }
+
+    const { error } = await query
 
     if (error) {
       console.error('Failed to delete help offer:', error)
