@@ -142,7 +142,7 @@ export function MessageBubble({
         )}
 
         {/* Reply preview */}
-        {message.reply_to && (
+        {message.reply_to && (message.reply_to as Message).id && (
           <div
             className={cn(
               'mb-1 w-full rounded-lg border-l-2 border-primary/40 bg-muted/50 px-3 py-1.5 text-xs',

@@ -90,8 +90,13 @@ export async function GET(request: NextRequest) {
       return acc
     }, {})
 
+    const replyTo = Array.isArray(msg.reply_to)
+      ? msg.reply_to[0] ?? null
+      : msg.reply_to ?? null
+
     return {
       ...msg,
+      reply_to: replyTo,
       reactions: Object.values(grouped),
     }
   })
