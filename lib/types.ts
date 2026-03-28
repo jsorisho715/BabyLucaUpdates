@@ -125,7 +125,7 @@ export const STICKY_NOTE_COLORS = [
 
 export const HELP_CATEGORIES = [
   { id: 'meals', label: 'Meals', icon: 'UtensilsCrossed', description: 'Drop off a home-cooked meal or order delivery' },
-  { id: 'visits', label: 'Visits', icon: 'Heart', description: 'Stop by to hold the baby so we can rest' },
+
   { id: 'errands', label: 'Errands', icon: 'ShoppingBag', description: 'Grocery run, pharmacy pickup, anything quick' },
   { id: 'walks', label: 'Walks', icon: 'Dog', description: 'Take the dog for a walk or help with pet care' },
   { id: 'laundry', label: 'Laundry', icon: 'Shirt', description: 'A load of laundry goes a long way' },
