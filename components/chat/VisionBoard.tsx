@@ -721,7 +721,7 @@ function AddItemDialog({
   const [noteText, setNoteText] = useState('')
   const [noteColor, setNoteColor] = useState<string>(STICKY_NOTE_COLORS[0])
   const [wishText, setWishText] = useState('')
-  const [wishTheme, setWishTheme] = useState(WISH_THEMES[0].id)
+  const [wishTheme, setWishTheme] = useState<string>(WISH_THEMES[0].id)
   const [starText, setStarText] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
