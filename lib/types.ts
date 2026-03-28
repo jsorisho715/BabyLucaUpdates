@@ -65,10 +65,20 @@ export interface Note {
   member?: Member
 }
 
+export interface HelpOffer {
+  id: string
+  member_id: string
+  category: string
+  available_date: string | null
+  note: string | null
+  created_at: string
+  member?: Member
+}
+
 export interface VisionBoardItem {
   id: string
   member_id: string
-  type: 'photo' | 'note'
+  type: 'photo' | 'note' | 'sticker' | 'wish' | 'doodle' | 'star'
   content: string
   x: number
   y: number
@@ -111,6 +121,42 @@ export const AVATAR_COLORS = [
 export const STICKY_NOTE_COLORS = [
   '#FEF3C7', '#DBEAFE', '#FCE7F3', '#D1FAE5',
   '#FDE68A', '#E0E7FF', '#FBCFE8', '#A7F3D0',
+] as const
+
+export const HELP_CATEGORIES = [
+  { id: 'meals', label: 'Meals', icon: 'UtensilsCrossed', description: 'Drop off a home-cooked meal or order delivery' },
+  { id: 'visits', label: 'Visits', icon: 'Heart', description: 'Stop by to hold the baby so we can rest' },
+  { id: 'errands', label: 'Errands', icon: 'ShoppingBag', description: 'Grocery run, pharmacy pickup, anything quick' },
+  { id: 'walks', label: 'Walks', icon: 'Dog', description: 'Take the dog for a walk or help with pet care' },
+  { id: 'laundry', label: 'Laundry', icon: 'Shirt', description: 'A load of laundry goes a long way' },
+  { id: 'cleaning', label: 'Cleaning', icon: 'Sparkles', description: 'Help with dishes, tidying up, light cleaning' },
+  { id: 'company', label: 'Just Being There', icon: 'Coffee', description: 'Come hang out, bring coffee, keep us company' },
+] as const
+
+export const BOARD_STICKERS = [
+  '🦁', '🐻', '🦊', '🐰', '🐶', '🐱',
+  '🦋', '🌈', '⭐', '🌙', '🚀', '🎈',
+  '🧸', '🎠', '🦄', '🐣', '🐝', '🌸',
+  '🌻', '🍼', '👶', '💫', '🎵', '🦕',
+  '🐢', '🐙', '🌟', '🎨', '🧩', '❤️',
+] as const
+
+export const WISH_THEMES = [
+  { id: 'starry', label: 'Starry', bg: 'from-indigo-50 to-purple-50', border: 'border-indigo-200', accent: 'text-indigo-500' },
+  { id: 'rainbow', label: 'Rainbow', bg: 'from-pink-50 to-amber-50', border: 'border-pink-200', accent: 'text-pink-500' },
+  { id: 'clouds', label: 'Clouds', bg: 'from-sky-50 to-blue-50', border: 'border-sky-200', accent: 'text-sky-500' },
+  { id: 'garden', label: 'Garden', bg: 'from-green-50 to-emerald-50', border: 'border-green-200', accent: 'text-green-500' },
+] as const
+
+export const STAR_PROMPTS = [
+  'First word will be...',
+  'Will grow up to be...',
+  'Favorite food will be...',
+  'Will love playing...',
+  'Superpower will be...',
+  'Best friend will be a...',
+  'Will always be known for...',
+  'Dream job will be...',
 ] as const
 
 export type TabType = 'chat' | 'notes' | 'board'

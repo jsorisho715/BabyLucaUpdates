@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { TabType } from '@/lib/types'
 import type { SessionPayload } from '@/lib/session'
 import { ChatRoom } from '@/components/chat/ChatRoom'
-import { NotesTab } from '@/components/chat/NotesTab'
+import { ForParentsTab } from '@/components/chat/ForParentsTab'
 import { VisionBoard } from '@/components/chat/VisionBoard'
 import { TabBar } from '@/components/chat/TabBar'
 import { Loader2 } from 'lucide-react'
@@ -40,7 +40,7 @@ export default function ChatPage() {
       {/* Tab content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'chat' && <ChatRoom session={session} />}
-        {activeTab === 'notes' && <NotesTab currentMemberId={session.memberId} />}
+        {activeTab === 'notes' && <ForParentsTab currentMemberId={session.memberId} />}
         {activeTab === 'board' && <VisionBoard currentMemberId={session.memberId} />}
       </div>
 

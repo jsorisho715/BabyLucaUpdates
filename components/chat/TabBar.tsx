@@ -11,7 +11,7 @@ interface TabBarProps {
 
 const tabs: { id: TabType; label: string; icon: typeof MessageSquare }[] = [
   { id: 'chat', label: 'Chats', icon: MessageSquare },
-  { id: 'notes', label: 'Notes for Parents', icon: Heart },
+  { id: 'notes', label: 'For Parents', icon: Heart },
   { id: 'board', label: "Luca's Notes", icon: Sparkles },
 ]
 
