@@ -108,6 +108,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  if (!session.isAdmin) {
+    return NextResponse.json(
+      { error: 'Only parents can post messages' },
+      { status: 403 }
+    )
+  }
+
   try {
     const body = await request.json()
     const parsed = sendMessageSchema.safeParse(body)
