@@ -229,7 +229,10 @@ function EditStatsDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-sm" aria-describedby="baby-stats-dialog-desc">
+      <DialogContent
+        className="max-w-sm max-h-[90dvh] flex flex-col"
+        aria-describedby="baby-stats-dialog-desc"
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Baby className="h-5 w-5 text-primary" />
@@ -240,7 +243,7 @@ function EditStatsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 pt-2">
+        <div className="space-y-3 pt-2 overflow-y-auto flex-1 pr-1">
           <div className="space-y-1">
             <Label className="text-xs">Name</Label>
             <Input
@@ -299,7 +302,9 @@ function EditStatsDialog({
               placeholder="Perfect in every way"
             />
           </div>
+        </div>
 
+        <div className="space-y-2 pt-2 border-t border-border">
           <Button className="w-full" onClick={handleSave} disabled={isSaving}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             {isSaving ? 'Saving...' : 'Save Stats'}
