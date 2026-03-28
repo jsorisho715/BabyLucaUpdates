@@ -43,6 +43,7 @@ const CARD_COLORS: Record<string, { bg: string; iconBg: string; iconColor: strin
 
 interface ForParentsTabProps {
   currentMemberId: string
+  isAdmin: boolean
 }
 
 function safeTimeAgo(dateStr: string): string {
@@ -50,7 +51,7 @@ function safeTimeAgo(dateStr: string): string {
   return isValid(d) ? formatDistanceToNow(d, { addSuffix: true }) : ''
 }
 
-export function ForParentsTab({ currentMemberId }: ForParentsTabProps) {
+export function ForParentsTab({ currentMemberId, isAdmin }: ForParentsTabProps) {
   const [offers, setOffers] = useState<HelpOffer[]>([])
   const [notes, setNotes] = useState<Note[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -171,6 +172,22 @@ export function ForParentsTab({ currentMemberId }: ForParentsTabProps) {
       toast.error('Failed to leave note')
     } finally {
       setIsSending(false)
+    }
+  }
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!confirm('Delete this note?')) return
+    try {
+      const res = await fetch('/api/notes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ noteId }),
+      })
+      if (!res.ok) throw new Error('Failed')
+      setNotes((prev) => prev.filter((n) => n.id !== noteId))
+      toast.success('Note deleted')
+    } catch {
+      toast.error('Failed to delete note')
     }
   }
 
@@ -357,6 +374,15 @@ export function ForParentsTab({ currentMemberId }: ForParentsTabProps) {
                       </span>
                       {member?.is_admin && (
                         <Badge variant="secondary" className="h-4 px-1 text-[9px]">Parent</Badge>
+                      )}
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDeleteNote(note.id)}
+                          className="ml-auto rounded-full p-1 text-muted-foreground transition-colors hover:bg-red-100 hover:text-red-500"
+                          aria-label="Delete note"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
                       )}
                     </div>
                     <p className="text-sm leading-relaxed text-foreground/90">{note.content}</p>

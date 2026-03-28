@@ -7,6 +7,10 @@ const noteSchema = z.object({
   content: z.string().min(1, 'Note cannot be empty').max(2000),
 })
 
+const deleteSchema = z.object({
+  noteId: z.string().uuid(),
+})
+
 export async function GET() {
   const session = await getSession()
   if (!session) {
@@ -59,6 +63,42 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ note })
+  } catch {
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!session.isAdmin) {
+    return NextResponse.json({ error: 'Only parents can delete notes' }, { status: 403 })
+  }
+
+  try {
+    const body = await request.json()
+    const parsed = deleteSchema.safeParse(body)
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
+    }
+
+    const supabase = createAdminClient()
+
+    const { error } = await supabase
+      .from('notes')
+      .delete()
+      .eq('id', parsed.data.noteId)
+
+    if (error) {
+      console.error('Failed to delete note:', error)
+      return NextResponse.json({ error: 'Failed to delete note' }, { status: 500 })
+    }
+
+    return NextResponse.json({ deleted: true })
   } catch {
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
   }

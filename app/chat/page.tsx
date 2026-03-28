@@ -40,7 +40,7 @@ export default function ChatPage() {
       {/* Tab content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'chat' && <ChatRoom session={session} />}
-        {activeTab === 'notes' && <ForParentsTab currentMemberId={session.memberId} />}
+        {activeTab === 'notes' && <ForParentsTab currentMemberId={session.memberId} isAdmin={session.isAdmin} />}
         {activeTab === 'board' && <VisionBoard currentMemberId={session.memberId} />}
       </div>
 
