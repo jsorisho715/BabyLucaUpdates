@@ -3,6 +3,8 @@ import { getSession } from '@/lib/session'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
+const EARLIEST_DATE = '2026-04-07'
+
 const createSchema = z.object({
   category: z.string().min(1),
   availableDate: z.string().nullable().optional(),
@@ -55,6 +57,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
     }
 
+    if (parsed.data.availableDate && parsed.data.availableDate < EARLIEST_DATE) {
+      return NextResponse.json(
+        { error: 'Date must be April 7, 2026 or later' },
+        { status: 400 }
+      )
+    }
+
     const supabase = createAdminClient()
 
     const { data: offer, error } = await supabase
@@ -91,6 +100,13 @@ export async function PATCH(request: Request) {
 
     if (!parsed.success) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
+    }
+
+    if (parsed.data.availableDate && parsed.data.availableDate < EARLIEST_DATE) {
+      return NextResponse.json(
+        { error: 'Date must be April 7, 2026 or later' },
+        { status: 400 }
+      )
     }
 
     const supabase = createAdminClient()
