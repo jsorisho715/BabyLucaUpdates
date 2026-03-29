@@ -16,7 +16,8 @@ import { BabyStatsCard } from './BabyStatsCard'
 import { ShareInvite } from './ShareInvite'
 import { Baby, ArrowDown, Loader2, LogOut, Pin, X } from 'lucide-react'
 import { SessionPayload } from '@/lib/session'
-import { playNotificationSound } from '@/lib/sounds'
+import { useNotifications } from '@/hooks/useNotifications'
+import { NotificationSettings } from './NotificationSettings'
 
 interface ChatRoomProps {
   session: SessionPayload
@@ -34,6 +35,7 @@ export function ChatRoom({ session }: ChatRoomProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const isNearBottomRef = useRef(true)
   const router = useRouter()
+  const { prefs: notifPrefs, updatePrefs, requestBrowserPermission, notify } = useNotifications()
 
   const handleCelebration = useCallback(() => {
     setCelebrationTrigger((p) => p + 1)
@@ -56,9 +58,13 @@ export function ChatRoom({ session }: ChatRoomProps) {
   const handleNewMessage = useCallback((message: Message) => {
     addMessage(message)
     if (message.member_id !== session.memberId) {
-      playNotificationSound()
+      const senderName = (message.member as Member)?.first_name || 'Someone'
+      const body = message.content
+        ? message.content.slice(0, 80)
+        : message.type === 'image' ? '📷 Photo' : '📎 Attachment'
+      notify(`${senderName} posted an update`, body)
     }
-  }, [addMessage, session.memberId])
+  }, [addMessage, session.memberId, notify])
 
   const handleMessageUpdate = useCallback((messageId: string, updates: Partial<Message>) => {
     setMessages((prev) =>
@@ -278,6 +284,11 @@ export function ChatRoom({ session }: ChatRoomProps) {
         </div>
         <div className="flex items-center gap-1">
           <ShareInvite />
+          <NotificationSettings
+            prefs={notifPrefs}
+            onUpdate={updatePrefs}
+            onRequestBrowserPermission={requestBrowserPermission}
+          />
           <MemberDrawer members={members} onlineCount={onlineCount} />
           <button
             onClick={handleLogout}
