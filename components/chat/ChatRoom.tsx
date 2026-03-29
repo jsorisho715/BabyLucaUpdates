@@ -66,6 +66,13 @@ export function ChatRoom({ session }: ChatRoomProps) {
     }
   }, [addMessage, session.memberId, notify])
 
+  const handleOwnNewMember = useCallback((member: Member) => {
+    setMembers((prev) => {
+      if (prev.some((m) => m.id === member.id)) return prev
+      return [...prev, member]
+    })
+  }, [])
+
   const handleMessageUpdate = useCallback((messageId: string, updates: Partial<Message>) => {
     setMessages((prev) =>
       prev.map((m) => (m.id === messageId ? { ...m, ...updates } : m))
@@ -80,12 +87,7 @@ export function ChatRoom({ session }: ChatRoomProps) {
     onNewMessage: handleNewMessage,
     onMessageUpdate: handleMessageUpdate,
     onMessageDelete: handleMessageDelete,
-    onNewMember: (member) => {
-      setMembers((prev) => {
-        if (prev.some((m) => m.id === member.id)) return prev
-        return [...prev, member]
-      })
-    },
+    onNewMember: handleOwnNewMember,
     onReactionChange: handleReactionChange,
     onCelebration: handleCelebration,
     currentMemberId: session.memberId,
@@ -148,6 +150,13 @@ export function ChatRoom({ session }: ChatRoomProps) {
       const err = await res.json()
       throw new Error(err.error || 'Failed to send')
     }
+
+    const result = await res.json()
+    if (result.message) {
+      addMessage({ ...result.message, reactions: [] } as Message)
+    }
+
+    notify("Luca's Updates", 'Message sent')
   }
 
   const handleReaction = async (messageId: string, emoji: string) => {

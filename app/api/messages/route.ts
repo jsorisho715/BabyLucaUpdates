@@ -152,7 +152,11 @@ export async function POST(request: Request) {
       })
       .select(`
         *,
-        member:members!member_id(id, first_name, last_name, is_admin, avatar_color)
+        member:members!member_id(id, first_name, last_name, is_admin, avatar_color),
+        reply_to:messages!reply_to_id(
+          id, content, type,
+          member:members!member_id(id, first_name, last_name, avatar_color)
+        )
       `)
       .single()
 
@@ -188,7 +192,11 @@ export async function POST(request: Request) {
       await supabase.from('mentions').insert(mentionInserts)
     }
 
-    return NextResponse.json({ message })
+    const replyTo = Array.isArray(message.reply_to)
+      ? message.reply_to[0] ?? null
+      : message.reply_to ?? null
+
+    return NextResponse.json({ message: { ...message, reply_to: replyTo } })
   } catch (error) {
     console.error('Send message error:', error)
     return NextResponse.json(
