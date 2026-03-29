@@ -21,7 +21,7 @@ export async function GET() {
 
   const { data: notes, error } = await supabase
     .from('notes')
-    .select('*, member:members!member_id(*)')
+    .select('*, member:members!member_id(id, first_name, last_name, is_admin, avatar_color)')
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
         member_id: session.memberId,
         content: parsed.data.content,
       })
-      .select('*, member:members!member_id(*)')
+      .select('*, member:members!member_id(id, first_name, last_name, is_admin, avatar_color)')
       .single()
 
     if (error) {

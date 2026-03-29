@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     .from('messages')
     .select(`
       *,
-      member:members!member_id(*),
+      member:members!member_id(id, first_name, last_name, is_admin, avatar_color),
       media(*),
       reply_to:messages!reply_to_id(
         id,
@@ -152,7 +152,7 @@ export async function POST(request: Request) {
       })
       .select(`
         *,
-        member:members!member_id(*)
+        member:members!member_id(id, first_name, last_name, is_admin, avatar_color)
       `)
       .single()
 

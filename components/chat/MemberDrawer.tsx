@@ -62,7 +62,6 @@ export function MemberDrawer({ members, onlineCount }: MemberDrawerProps) {
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">{member.email}</p>
                 </div>
               </div>
             ))}

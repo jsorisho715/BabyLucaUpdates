@@ -10,9 +10,13 @@ export async function GET() {
 
   const supabase = createAdminClient()
 
+  const columns = session.isAdmin
+    ? '*'
+    : 'id, first_name, last_name, is_admin, avatar_color, joined_at'
+
   const { data: members, error } = await supabase
     .from('members')
-    .select('*')
+    .select(columns)
     .order('joined_at', { ascending: true })
 
   if (error) {
