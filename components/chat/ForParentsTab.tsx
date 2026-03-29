@@ -16,7 +16,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'
 import {
-  Heart, Send, Loader2, BookHeart, X,
+  Heart, Send, Loader2, BookHeart, X, Pencil, Trash2,
   UtensilsCrossed, ShoppingBag, Dog, Shirt, Coffee, Sparkles, Calendar,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -61,6 +61,10 @@ export function ForParentsTab({ currentMemberId, isAdmin }: ForParentsTabProps) 
   const [signUpDate, setSignUpDate] = useState('')
   const [signUpNote, setSignUpNote] = useState('')
   const [isSigningUp, setIsSigningUp] = useState(false)
+  const [editingOffer, setEditingOffer] = useState<HelpOffer | null>(null)
+  const [editDate, setEditDate] = useState('')
+  const [editNote, setEditNote] = useState('')
+  const [isUpdating, setIsUpdating] = useState(false)
   const supabaseRef = useRef(createClient())
 
   const fetchData = useCallback(async () => {
@@ -148,6 +152,49 @@ export function ForParentsTab({ currentMemberId, isAdmin }: ForParentsTabProps) 
     } catch {
       toast.error('Failed to remove')
     }
+  }
+
+  const openEditDialog = (offer: HelpOffer) => {
+    setEditingOffer(offer)
+    setEditDate(offer.available_date || '')
+    setEditNote(offer.note || '')
+  }
+
+  const handleUpdateOffer = async () => {
+    if (!editingOffer || isUpdating) return
+
+    setIsUpdating(true)
+    try {
+      const res = await fetch('/api/help-offers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingOffer.id,
+          availableDate: editDate || null,
+          note: editNote.trim() || undefined,
+        }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed')
+      }
+
+      const data = await res.json()
+      setOffers((prev) => prev.map((o) => o.id === editingOffer.id ? data.offer : o))
+      setEditingOffer(null)
+      toast.success('Updated your sign-up')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleDeleteEditingOffer = async () => {
+    if (!editingOffer) return
+    await handleRemoveOffer(editingOffer.id)
+    setEditingOffer(null)
   }
 
   const handleSendNote = async () => {
@@ -269,9 +316,19 @@ export function ForParentsTab({ currentMemberId, isAdmin }: ForParentsTabProps) 
                         return (
                           <div
                             key={offer.id}
+                            role={isOwn ? 'button' : undefined}
+                            tabIndex={isOwn ? 0 : undefined}
+                            onClick={(e) => {
+                              if (isOwn) {
+                                e.stopPropagation()
+                                openEditDialog(offer)
+                              }
+                            }}
                             className={cn(
                               'group relative flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-2 text-[10px]',
-                              isOwn ? 'bg-primary/10' : 'bg-white/70'
+                              isOwn
+                                ? 'bg-primary/10 cursor-pointer active:bg-primary/20'
+                                : 'bg-white/70'
                             )}
                           >
                             <div
@@ -288,7 +345,7 @@ export function ForParentsTab({ currentMemberId, isAdmin }: ForParentsTabProps) 
                                 </span>
                               )}
                             </span>
-                            {(isOwn || isAdmin) && (
+                            {isAdmin && !isOwn && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
@@ -451,6 +508,71 @@ export function ForParentsTab({ currentMemberId, isAdmin }: ForParentsTabProps) 
               </Button>
               <Button className="flex-1" onClick={handleSignUp} disabled={isSigningUp}>
                 {isSigningUp ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Count Me In'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit / Delete offer dialog */}
+      <Dialog open={!!editingOffer} onOpenChange={(o) => !o && setEditingOffer(null)}>
+        <DialogContent className="max-w-sm" aria-describedby="help-edit-desc">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-primary" />
+              Edit Your Sign-Up
+            </DialogTitle>
+            <DialogDescription id="help-edit-desc">
+              {editingOffer && HELP_CATEGORIES.find((c) => c.id === editingOffer.category)?.label}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-foreground">
+                When are you available?
+              </label>
+              <Input
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                className="rounded-xl"
+                min="2026-04-07"
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Leave empty for &quot;anytime / flexible&quot;
+              </p>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-foreground">
+                Note <span className="font-normal text-muted-foreground">(optional)</span>
+              </label>
+              <Textarea
+                value={editNote}
+                onChange={(e) => setEditNote(e.target.value)}
+                placeholder="e.g. I'll bring lasagna!"
+                rows={2}
+                maxLength={500}
+                className="resize-none rounded-xl"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                onClick={handleDeleteEditingOffer}
+                aria-label="Delete sign-up"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" className="flex-1" onClick={() => setEditingOffer(null)}>
+                Cancel
+              </Button>
+              <Button className="flex-1" onClick={handleUpdateOffer} disabled={isUpdating}>
+                {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
               </Button>
             </div>
           </div>
