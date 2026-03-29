@@ -58,7 +58,7 @@ export function ChatRoom({ session }: ChatRoomProps) {
     if (message.member_id !== session.memberId) {
       playNotificationSound()
     }
-  }, [addMessage, session.memberId, playNotificationSound])
+  }, [addMessage, session.memberId])
 
   const handleMessageUpdate = useCallback((messageId: string, updates: Partial<Message>) => {
     setMessages((prev) =>
@@ -156,10 +156,20 @@ export function ChatRoom({ session }: ChatRoomProps) {
             if (r.count <= 1) {
               reactions.splice(idx, 1)
             } else {
-              reactions[idx] = { ...r, count: r.count - 1, hasReacted: false }
+              reactions[idx] = {
+                ...r,
+                count: r.count - 1,
+                hasReacted: false,
+                members: r.members.filter((mb) => mb.id !== session.memberId),
+              }
             }
           } else {
-            reactions[idx] = { ...r, count: r.count + 1, hasReacted: true }
+            reactions[idx] = {
+              ...r,
+              count: r.count + 1,
+              hasReacted: true,
+              members: [...r.members, { id: session.memberId, first_name: 'You' }],
+            }
           }
         } else {
           reactions.push({

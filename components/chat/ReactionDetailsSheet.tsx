@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import type { ReactionGroup } from '@/lib/types'
 import {
@@ -26,6 +26,12 @@ export function ReactionDetailsSheet({
   const [activeEmoji, setActiveEmoji] = useState<string | null>(
     initialEmoji ?? null
   )
+
+  useEffect(() => {
+    if (open) {
+      setActiveEmoji(initialEmoji ?? null)
+    }
+  }, [open, initialEmoji])
 
   const filteredReactions = activeEmoji
     ? reactions.filter((r) => r.emoji === activeEmoji)
