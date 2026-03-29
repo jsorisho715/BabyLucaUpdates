@@ -1,27 +1,58 @@
 let audioCtx: AudioContext | null = null
 
-export function playNotificationSound() {
+function getContext(): AudioContext | null {
   try {
     if (!audioCtx) {
       audioCtx = new AudioContext()
     }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume()
+    }
+    return audioCtx
+  } catch {
+    return null
+  }
+}
 
-    const osc = audioCtx.createOscillator()
-    const gain = audioCtx.createGain()
+export function playNotificationSound() {
+  const ctx = getContext()
+  if (!ctx) return
 
-    osc.connect(gain)
-    gain.connect(audioCtx.destination)
+  try {
+    const now = ctx.currentTime
 
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(830, audioCtx.currentTime)
-    osc.frequency.setValueAtTime(1000, audioCtx.currentTime + 0.1)
+    const notes = [
+      { freq: 784, start: 0, dur: 0.12 },
+      { freq: 1047, start: 0.1, dur: 0.18 },
+    ]
 
-    gain.gain.setValueAtTime(0.15, audioCtx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3)
+    notes.forEach(({ freq, start, dur }) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
 
-    osc.start(audioCtx.currentTime)
-    osc.stop(audioCtx.currentTime + 0.3)
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, now + start)
+
+      gain.gain.setValueAtTime(0, now + start)
+      gain.gain.linearRampToValueAtTime(0.12, now + start + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur)
+
+      osc.start(now + start)
+      osc.stop(now + start + dur)
+    })
   } catch {
     // Audio not available
+  }
+}
+
+export function triggerVibration() {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([80, 40, 80])
+    }
+  } catch {
+    // Vibration not available
   }
 }
