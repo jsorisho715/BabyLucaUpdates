@@ -27,21 +27,38 @@ export function useRealtimeChat({
   const channelRef = useRef<ReturnType<typeof supabaseRef.current.channel> | null>(null)
   const [onlineCount, setOnlineCount] = useState(1)
 
+  const onNewMessageRef = useRef(onNewMessage)
+  const onMessageUpdateRef = useRef(onMessageUpdate)
+  const onMessageDeleteRef = useRef(onMessageDelete)
+  const onNewMemberRef = useRef(onNewMember)
+  const onReactionChangeRef = useRef(onReactionChange)
+  const onCelebrationRef = useRef(onCelebration)
+  const currentMemberIdRef = useRef(currentMemberId)
+
+  useEffect(() => { onNewMessageRef.current = onNewMessage }, [onNewMessage])
+  useEffect(() => { onMessageUpdateRef.current = onMessageUpdate }, [onMessageUpdate])
+  useEffect(() => { onMessageDeleteRef.current = onMessageDelete }, [onMessageDelete])
+  useEffect(() => { onNewMemberRef.current = onNewMember }, [onNewMember])
+  useEffect(() => { onReactionChangeRef.current = onReactionChange }, [onReactionChange])
+  useEffect(() => { onCelebrationRef.current = onCelebration }, [onCelebration])
+  useEffect(() => { currentMemberIdRef.current = currentMemberId }, [currentMemberId])
+
   const sendCelebration = useCallback(() => {
     channelRef.current?.send({
       type: 'broadcast',
       event: 'celebration',
-      payload: { memberId: currentMemberId },
+      payload: { memberId: currentMemberIdRef.current },
     })
-    onCelebration()
-  }, [currentMemberId, onCelebration])
+    onCelebrationRef.current()
+  }, [])
 
   useEffect(() => {
     const supabase = supabaseRef.current
+    const memberId = currentMemberId
 
     const channel = supabase.channel('chat-room', {
       config: {
-        presence: { key: currentMemberId },
+        presence: { key: memberId },
       },
     })
 
@@ -65,7 +82,10 @@ export function useRealtimeChat({
             .single()
 
           if (fullMessage) {
-            onNewMessage({ ...fullMessage, reactions: [] } as unknown as Message)
+            const replyTo = Array.isArray(fullMessage.reply_to)
+              ? fullMessage.reply_to[0] ?? null
+              : fullMessage.reply_to ?? null
+            onNewMessageRef.current({ ...fullMessage, reply_to: replyTo, reactions: [] } as unknown as Message)
           }
         }
       )
@@ -75,7 +95,7 @@ export function useRealtimeChat({
         (payload) => {
           const updated = payload.new as { id: string; is_pinned?: boolean }
           if (updated.id) {
-            onMessageUpdate(updated.id, { is_pinned: updated.is_pinned })
+            onMessageUpdateRef.current(updated.id, { is_pinned: updated.is_pinned })
           }
         }
       )
@@ -85,7 +105,7 @@ export function useRealtimeChat({
         (payload) => {
           const deleted = payload.old as { id?: string }
           if (deleted?.id) {
-            onMessageDelete(deleted.id)
+            onMessageDeleteRef.current(deleted.id)
           }
         }
       )
@@ -96,7 +116,7 @@ export function useRealtimeChat({
           const messageId = (payload.new as { message_id?: string })?.message_id ||
             (payload.old as { message_id?: string })?.message_id
           if (messageId) {
-            onReactionChange(messageId)
+            onReactionChangeRef.current(messageId)
           }
         }
       )
@@ -104,12 +124,12 @@ export function useRealtimeChat({
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'members' },
         (payload) => {
-          onNewMember(payload.new as Member)
+          onNewMemberRef.current(payload.new as Member)
         }
       )
       .on('broadcast', { event: 'celebration' }, (payload) => {
-        if (payload.payload?.memberId !== currentMemberId) {
-          onCelebration()
+        if (payload.payload?.memberId !== currentMemberIdRef.current) {
+          onCelebrationRef.current()
         }
       })
       .on('presence', { event: 'sync' }, () => {
@@ -128,7 +148,7 @@ export function useRealtimeChat({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [currentMemberId, onNewMessage, onMessageUpdate, onMessageDelete, onNewMember, onReactionChange, onCelebration])
+  }, [currentMemberId])
 
   return { sendCelebration, onlineCount }
 }
