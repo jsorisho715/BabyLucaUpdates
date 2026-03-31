@@ -7,7 +7,6 @@ import imageCompression from 'browser-image-compression'
 import { cn } from '@/lib/utils'
 import { uploadFile } from '@/lib/upload'
 import type { Message, Member } from '@/lib/types'
-import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import {
   Send, Image as ImageIcon, X, PartyPopper, Loader2,
@@ -45,6 +44,20 @@ export function MessageComposer({
   const [mentionQuery, setMentionQuery] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const composerRef = useRef<HTMLDivElement>(null)
+
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    const maxHeight = 128
+    el.style.height = Math.min(el.scrollHeight, maxHeight) + 'px'
+    el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden'
+  }, [])
+
+  useEffect(() => {
+    autoResize()
+  }, [content, autoResize])
 
   const handleSend = useCallback(async () => {
     const trimmed = content.trim()
@@ -66,7 +79,10 @@ export function MessageComposer({
 
       setContent('')
       onCancelReply()
-      textareaRef.current?.focus()
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto'
+        textareaRef.current.focus()
+      }
     } catch {
       toast.error('Failed to send message')
     } finally {
@@ -158,28 +174,41 @@ export function MessageComposer({
     }
   }
 
+  // Keep composer pinned above the software keyboard using visualViewport
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
 
-    const handleResize = () => {
-      const offset = window.innerHeight - vv.height
-      const composer = document.getElementById('message-composer')
-      if (composer) {
-        composer.style.transform = offset > 0 ? `translateY(-${offset}px)` : ''
+    const update = () => {
+      const composer = composerRef.current
+      if (!composer) return
+
+      const keyboardHeight = window.innerHeight - vv.height - vv.offsetTop
+      if (keyboardHeight > 0) {
+        composer.style.position = 'fixed'
+        composer.style.bottom = `${keyboardHeight}px`
+        composer.style.left = '0'
+        composer.style.right = '0'
+        composer.style.zIndex = '50'
+      } else {
+        composer.style.position = ''
+        composer.style.bottom = ''
+        composer.style.left = ''
+        composer.style.right = ''
+        composer.style.zIndex = ''
       }
     }
 
-    vv.addEventListener('resize', handleResize)
-    vv.addEventListener('scroll', handleResize)
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
     return () => {
-      vv.removeEventListener('resize', handleResize)
-      vv.removeEventListener('scroll', handleResize)
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
     }
   }, [])
 
   return (
-    <div id="message-composer" className="border-t bg-white/80 backdrop-blur-sm transition-transform">
+    <div ref={composerRef} id="message-composer" className="border-t bg-white/80 backdrop-blur-sm">
       {/* Reply preview */}
       <AnimatePresence>
         {replyTo && (
@@ -237,7 +266,7 @@ export function MessageComposer({
         )}
       </AnimatePresence>
 
-      {/* Composer */}
+      {/* Composer row */}
       <div className="flex items-end gap-1.5 p-3">
         <div className="flex gap-0.5">
           <input
@@ -260,7 +289,7 @@ export function MessageComposer({
           <VoiceRecorder onSend={onSend} />
         </div>
 
-        <Textarea
+        <textarea
           ref={textareaRef}
           value={content}
           onChange={(e) => handleContentChange(e.target.value)}
@@ -268,9 +297,12 @@ export function MessageComposer({
           placeholder="Type a message..."
           rows={1}
           className={cn(
-            'max-h-32 min-h-[2.5rem] flex-1 resize-none rounded-2xl border-border/50 bg-muted/50 px-4 py-2.5 text-sm',
-            'focus-visible:ring-1 focus-visible:ring-primary/30'
+            'flex-1 resize-none rounded-2xl border border-border/50 bg-muted/50 px-4 py-2.5 text-sm leading-relaxed',
+            'min-h-[2.5rem] max-h-32 overflow-hidden',
+            'outline-none focus:ring-1 focus:ring-primary/30',
+            'transition-[height]'
           )}
+          style={{ overflowY: 'hidden' }}
         />
 
         <div className="flex gap-0.5">
