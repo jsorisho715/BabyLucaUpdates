@@ -18,6 +18,8 @@ import { Baby, ArrowDown, Loader2, LogOut, Pin, X } from 'lucide-react'
 import { SessionPayload } from '@/lib/session'
 import { useNotifications } from '@/hooks/useNotifications'
 import { NotificationSettings } from './NotificationSettings'
+import { ChatPdfExport } from './ChatPdfExport'
+import { format, isValid, isSameDay } from 'date-fns'
 
 interface ChatRoomProps {
   session: SessionPayload
@@ -293,6 +295,7 @@ export function ChatRoom({ session }: ChatRoomProps) {
         </div>
         <div className="flex items-center gap-1">
           <ShareInvite />
+          <ChatPdfExport messages={messages} />
           <NotificationSettings
             prefs={notifPrefs}
             onUpdate={updatePrefs}
@@ -372,21 +375,39 @@ export function ChatRoom({ session }: ChatRoomProps) {
 
         {/* Message list */}
         <div className="py-2">
-          {messages.map((message, index) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              currentMemberId={session.memberId}
-              isAdmin={session.isAdmin}
-              onReply={setReplyTo}
-              onReaction={handleReaction}
-              onMediaClick={(url, type) => { if (type !== 'audio') setMediaViewer({ url, type }) }}
-              onPin={session.isAdmin ? handlePin : undefined}
-              onDelete={session.isAdmin ? handleDelete : undefined}
-              isGrouped={isGrouped(index)}
-              isPinned={message.is_pinned}
-            />
-          ))}
+          {messages.map((message, index) => {
+            const currDate = new Date(message.created_at)
+            const prevDate = index > 0 ? new Date(messages[index - 1].created_at) : null
+            const showDateSep =
+              isValid(currDate) &&
+              (!prevDate || !isValid(prevDate) || !isSameDay(currDate, prevDate))
+
+            return (
+              <div key={message.id}>
+                {showDateSep && (
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="h-px flex-1 bg-border/50" />
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      {format(currDate, 'MMMM d, yyyy')}
+                    </span>
+                    <div className="h-px flex-1 bg-border/50" />
+                  </div>
+                )}
+                <MessageBubble
+                  message={message}
+                  currentMemberId={session.memberId}
+                  isAdmin={session.isAdmin}
+                  onReply={setReplyTo}
+                  onReaction={handleReaction}
+                  onMediaClick={(url, type) => { if (type !== 'audio') setMediaViewer({ url, type }) }}
+                  onPin={session.isAdmin ? handlePin : undefined}
+                  onDelete={session.isAdmin ? handleDelete : undefined}
+                  isGrouped={isGrouped(index)}
+                  isPinned={message.is_pinned}
+                />
+              </div>
+            )
+          })}
         </div>
 
         <div ref={bottomRef} />

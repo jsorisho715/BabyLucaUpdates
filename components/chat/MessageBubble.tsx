@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { formatDistanceToNow, isValid } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -24,6 +24,8 @@ interface MessageBubbleProps {
   isPinned?: boolean
 }
 
+const LONG_PRESS_DURATION = 500
+
 export function MessageBubble({
   message,
   currentMemberId,
@@ -39,12 +41,15 @@ export function MessageBubble({
   const [showActions, setShowActions] = useState(false)
   const [showReactionPicker, setShowReactionPicker] = useState(false)
   const actionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isLongPressRef = useRef(false)
   const isOwn = message.member_id === currentMemberId
   const member = message.member as Member
 
   useEffect(() => {
     return () => {
       if (actionTimeoutRef.current) clearTimeout(actionTimeoutRef.current)
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
     }
   }, [])
 
@@ -83,10 +88,36 @@ export function MessageBubble({
     }, 200)
   }
 
-  const handleTap = () => {
-    setShowActions((prev) => !prev)
-    if (showActions) setShowReactionPicker(false)
-  }
+  // Long press: show reaction picker (mobile)
+  const handleTouchStart = useCallback(() => {
+    isLongPressRef.current = false
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressRef.current = true
+      setShowReactionPicker(true)
+      setShowActions(true)
+    }, LONG_PRESS_DURATION)
+  }, [])
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+    // If it wasn't a long press, do nothing (no toggle on single tap)
+  }, [])
+
+  const handleTouchMove = useCallback(() => {
+    // Cancel long press if finger moves
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }, [])
+
+  const dismiss = useCallback(() => {
+    setShowActions(false)
+    setShowReactionPicker(false)
+  }, [])
 
   return (
     <motion.div
@@ -113,10 +144,12 @@ export function MessageBubble({
         <div className="w-8 shrink-0" />
       )}
 
-      {/* Message content wrapper -- action buttons anchor to this */}
+      {/* Message content wrapper */}
       <div
         className={cn('relative max-w-[75%] min-w-0', isOwn && 'flex flex-col items-end')}
-        onTouchEnd={handleTap}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
       >
         {/* Pinned indicator */}
         {isPinned && (
@@ -233,7 +266,7 @@ export function MessageBubble({
           />
         )}
 
-        {/* Action buttons -- anchored above the message bubble */}
+        {/* Action buttons (desktop hover / long-press) */}
         <AnimatePresence>
           {showActions && (
             <motion.div
@@ -250,7 +283,7 @@ export function MessageBubble({
             >
               {isAdmin && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); onReply(message) }}
+                  onClick={(e) => { e.stopPropagation(); onReply(message); dismiss() }}
                   className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   aria-label="Reply"
                 >
@@ -266,7 +299,7 @@ export function MessageBubble({
               </button>
               {isAdmin && onPin && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); onPin(message.id) }}
+                  onClick={(e) => { e.stopPropagation(); onPin(message.id); dismiss() }}
                   className={cn(
                     'rounded-full p-1.5 transition-colors hover:bg-muted',
                     isPinned ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
@@ -283,6 +316,7 @@ export function MessageBubble({
                     if (confirm('Delete this message?')) {
                       onDelete(message.id)
                     }
+                    dismiss()
                   }}
                   className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-500"
                   aria-label="Delete message"
