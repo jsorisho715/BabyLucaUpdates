@@ -379,13 +379,13 @@ export function MessageBubble({
         </AnimatePresence>
 
         {/* Read receipt count — visible to admins on admin messages */}
-        {isAdmin && isAdminMessage && typeof message.read_count === 'number' && message.read_count > 0 && (
+        {isAdmin && isAdminMessage && typeof message.read_count === 'number' && (
           <div className={cn(
             'mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground',
             isOwn && 'justify-end'
           )}>
             <Eye className="h-3 w-3" />
-            <span>Seen by {message.read_count}</span>
+            <span>{message.read_count > 0 ? `Seen by ${message.read_count}` : 'Not seen yet'}</span>
           </div>
         )}
       </div>

@@ -84,16 +84,20 @@ export async function GET(request: NextRequest) {
       .map((m) => m.id) || []
 
     if (adminMessageIds.length > 0) {
-      const { data: readData } = await supabase
-        .from('message_reads')
-        .select('message_id')
-        .in('message_id', adminMessageIds)
+      try {
+        const { data: readData } = await supabase
+          .from('message_reads')
+          .select('message_id')
+          .in('message_id', adminMessageIds)
 
-      if (readData) {
-        readCounts = readData.reduce<Record<string, number>>((acc, r) => {
-          acc[r.message_id] = (acc[r.message_id] || 0) + 1
-          return acc
-        }, {})
+        if (readData) {
+          readCounts = readData.reduce<Record<string, number>>((acc, r) => {
+            acc[r.message_id] = (acc[r.message_id] || 0) + 1
+            return acc
+          }, {})
+        }
+      } catch {
+        // message_reads table may not exist yet
       }
     }
   }
