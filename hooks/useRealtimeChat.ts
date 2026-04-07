@@ -11,6 +11,7 @@ interface UseRealtimeChatProps {
   onNewMember: (member: Member) => void
   onReactionChange: (messageId: string) => void
   onCelebration: () => void
+  onReadCountChange?: (messageId: string) => void
   currentMemberId: string
 }
 
@@ -21,6 +22,7 @@ export function useRealtimeChat({
   onNewMember,
   onReactionChange,
   onCelebration,
+  onReadCountChange,
   currentMemberId,
 }: UseRealtimeChatProps) {
   const supabaseRef = useRef(createClient())
@@ -33,6 +35,7 @@ export function useRealtimeChat({
   const onNewMemberRef = useRef(onNewMember)
   const onReactionChangeRef = useRef(onReactionChange)
   const onCelebrationRef = useRef(onCelebration)
+  const onReadCountChangeRef = useRef(onReadCountChange)
   const currentMemberIdRef = useRef(currentMemberId)
 
   useEffect(() => { onNewMessageRef.current = onNewMessage }, [onNewMessage])
@@ -41,6 +44,7 @@ export function useRealtimeChat({
   useEffect(() => { onNewMemberRef.current = onNewMember }, [onNewMember])
   useEffect(() => { onReactionChangeRef.current = onReactionChange }, [onReactionChange])
   useEffect(() => { onCelebrationRef.current = onCelebration }, [onCelebration])
+  useEffect(() => { onReadCountChangeRef.current = onReadCountChange }, [onReadCountChange])
   useEffect(() => { currentMemberIdRef.current = currentMemberId }, [currentMemberId])
 
   const sendCelebration = useCallback(() => {
@@ -125,6 +129,16 @@ export function useRealtimeChat({
         { event: 'INSERT', schema: 'public', table: 'members' },
         (payload) => {
           onNewMemberRef.current(payload.new as Member)
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'message_reads' },
+        (payload) => {
+          const read = payload.new as { message_id?: string; member_id?: string }
+          if (read.message_id && onReadCountChangeRef.current) {
+            onReadCountChangeRef.current(read.message_id)
+          }
         }
       )
       .on('broadcast', { event: 'celebration' }, (payload) => {

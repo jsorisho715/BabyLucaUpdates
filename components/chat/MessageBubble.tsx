@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import type { Message, Member } from '@/lib/types'
 import { ReactionBar } from './ReactionBar'
 import { ReactionPicker } from './ReactionPicker'
-import { Reply, SmilePlus, Pin, Trash2 } from 'lucide-react'
+import { Reply, SmilePlus, Pin, Trash2, Eye } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
 interface MessageBubbleProps {
@@ -20,6 +20,7 @@ interface MessageBubbleProps {
   onMediaClick: (url: string, type: 'image' | 'video' | 'audio') => void
   onPin?: (messageId: string) => void
   onDelete?: (messageId: string) => void
+  onVisible?: (messageId: string) => void
   isGrouped: boolean
   isPinned?: boolean
 }
@@ -35,6 +36,7 @@ export function MessageBubble({
   onMediaClick,
   onPin,
   onDelete,
+  onVisible,
   isGrouped,
   isPinned,
 }: MessageBubbleProps) {
@@ -43,8 +45,11 @@ export function MessageBubble({
   const actionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isLongPressRef = useRef(false)
+  const bubbleRef = useRef<HTMLDivElement>(null)
+  const hasBeenSeenRef = useRef(false)
   const isOwn = message.member_id === currentMemberId
   const member = message.member as Member
+  const isAdminMessage = member?.is_admin
 
   useEffect(() => {
     return () => {
@@ -52,6 +57,25 @@ export function MessageBubble({
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (!onVisible || isOwn || hasBeenSeenRef.current) return
+    const el = bubbleRef.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasBeenSeenRef.current) {
+          hasBeenSeenRef.current = true
+          onVisible(message.id)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.5 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [onVisible, message.id, isOwn])
 
   if (message.type === 'system') {
     return (
@@ -121,6 +145,7 @@ export function MessageBubble({
 
   return (
     <motion.div
+      ref={bubbleRef}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
@@ -352,6 +377,17 @@ export function MessageBubble({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Read receipt count — visible to admins on admin messages */}
+        {isAdmin && isAdminMessage && typeof message.read_count === 'number' && message.read_count > 0 && (
+          <div className={cn(
+            'mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground',
+            isOwn && 'justify-end'
+          )}>
+            <Eye className="h-3 w-3" />
+            <span>Seen by {message.read_count}</span>
+          </div>
+        )}
       </div>
     </motion.div>
   )

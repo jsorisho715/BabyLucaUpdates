@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
   const messageIds = messages?.map((m) => m.id) || []
 
   let reactions: { message_id: string; emoji: string; member_id: string; member: { id: string; first_name: string } }[] = []
+  let readCounts: Record<string, number> = {}
   if (messageIds.length > 0) {
     const { data: reactionData } = await supabase
       .from('reactions')
@@ -74,6 +75,27 @@ export async function GET(request: NextRequest) {
       member_id: r.member_id as string,
       member: Array.isArray(r.member) ? r.member[0] : r.member,
     })) as typeof reactions
+
+    const adminMessageIds = messages
+      ?.filter((m) => {
+        const member = Array.isArray(m.member) ? m.member[0] : m.member
+        return member?.is_admin
+      })
+      .map((m) => m.id) || []
+
+    if (adminMessageIds.length > 0) {
+      const { data: readData } = await supabase
+        .from('message_reads')
+        .select('message_id')
+        .in('message_id', adminMessageIds)
+
+      if (readData) {
+        readCounts = readData.reduce<Record<string, number>>((acc, r) => {
+          acc[r.message_id] = (acc[r.message_id] || 0) + 1
+          return acc
+        }, {})
+      }
+    }
   }
 
   const messagesWithReactions = messages?.map((msg) => {
@@ -98,6 +120,7 @@ export async function GET(request: NextRequest) {
       ...msg,
       reply_to: replyTo,
       reactions: Object.values(grouped),
+      read_count: readCounts[msg.id] || 0,
     }
   })
 
