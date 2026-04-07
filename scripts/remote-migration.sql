@@ -110,6 +110,15 @@ create table if not exists public.baby_stats (
   updated_at timestamptz default now()
 );
 
+-- Message reads (read receipts)
+create table if not exists public.message_reads (
+  id uuid primary key default gen_random_uuid(),
+  message_id uuid not null references public.messages(id) on delete cascade,
+  member_id uuid not null references public.members(id) on delete cascade,
+  read_at timestamptz default now(),
+  unique (message_id, member_id)
+);
+
 -- Indexes
 create index if not exists idx_messages_created_at on public.messages(created_at desc);
 create index if not exists idx_messages_member_id on public.messages(member_id);
@@ -120,6 +129,8 @@ create index if not exists idx_reactions_member_id on public.reactions(member_id
 create index if not exists idx_mentions_message_id on public.mentions(message_id);
 create index if not exists idx_mentions_member_id on public.mentions(mentioned_member_id);
 create index if not exists idx_notes_created_at on public.notes(created_at desc);
+create index if not exists idx_message_reads_message_id on public.message_reads(message_id);
+create index if not exists idx_message_reads_member_id on public.message_reads(member_id);
 
 -- Enable RLS
 alter table public.members enable row level security;
@@ -130,6 +141,7 @@ alter table public.mentions enable row level security;
 alter table public.notes enable row level security;
 alter table public.vision_board_items enable row level security;
 alter table public.baby_stats enable row level security;
+alter table public.message_reads enable row level security;
 
 -- RLS Policies (using DO blocks to avoid errors if they already exist)
 do $$ begin
@@ -190,6 +202,12 @@ do $$ begin
   create policy "Anyone can delete own board items" on public.vision_board_items for delete using (true);
 exception when duplicate_object then null; end $$;
 do $$ begin
+  create policy "Anyone can view message reads" on public.message_reads for select using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "Anyone can insert message reads" on public.message_reads for insert with check (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
   create policy "Anyone can view baby stats" on public.baby_stats for select using (true);
 exception when duplicate_object then null; end $$;
 do $$ begin
@@ -214,6 +232,9 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 do $$ begin
   alter publication supabase_realtime add table public.vision_board_items;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.message_reads;
 exception when duplicate_object then null; end $$;
 
 -- Seed parents

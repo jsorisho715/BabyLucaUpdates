@@ -22,6 +22,7 @@ export interface Message {
   reactions?: ReactionGroup[]
   reply_to?: Message | null
   mentions?: Mention[]
+  read_count?: number
 }
 
 export interface Media {

@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { useMessages } from '@/hooks/useMessages'
 import { useRealtimeChat } from '@/hooks/useRealtimeChat'
+import { useReadReceipts } from '@/hooks/useReadReceipts'
 import type { Message, Member } from '@/lib/types'
 import { MessageBubble } from './MessageBubble'
 import { MessageComposer } from './MessageComposer'
@@ -28,6 +29,10 @@ interface ChatRoomProps {
 export function ChatRoom({ session }: ChatRoomProps) {
   const { messages, isLoading, hasMore, fetchMessages, loadMore, addMessage, updateReactions, setMessages } =
     useMessages()
+  const { markAsRead } = useReadReceipts({
+    currentMemberId: session.memberId,
+    isAdmin: session.isAdmin,
+  })
   const [members, setMembers] = useState<Member[]>([])
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const [celebrationTrigger, setCelebrationTrigger] = useState(0)
@@ -85,6 +90,14 @@ export function ChatRoom({ session }: ChatRoomProps) {
     setMessages((prev) => prev.filter((m) => m.id !== messageId))
   }, [setMessages])
 
+  const handleReadCountChange = useCallback((messageId: string) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId ? { ...m, read_count: (m.read_count || 0) + 1 } : m
+      )
+    )
+  }, [setMessages])
+
   const { sendCelebration, onlineCount } = useRealtimeChat({
     onNewMessage: handleNewMessage,
     onMessageUpdate: handleMessageUpdate,
@@ -92,6 +105,7 @@ export function ChatRoom({ session }: ChatRoomProps) {
     onNewMember: handleOwnNewMember,
     onReactionChange: handleReactionChange,
     onCelebration: handleCelebration,
+    onReadCountChange: session.isAdmin ? handleReadCountChange : undefined,
     currentMemberId: session.memberId,
   })
 
@@ -402,6 +416,7 @@ export function ChatRoom({ session }: ChatRoomProps) {
                   onMediaClick={(url, type) => { if (type !== 'audio') setMediaViewer({ url, type }) }}
                   onPin={session.isAdmin ? handlePin : undefined}
                   onDelete={session.isAdmin ? handleDelete : undefined}
+                  onVisible={!session.isAdmin ? markAsRead : undefined}
                   isGrouped={isGrouped(index)}
                   isPinned={message.is_pinned}
                 />
